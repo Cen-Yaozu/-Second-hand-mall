@@ -1,13 +1,10 @@
 <template>
     <div>
         <app-head></app-head>
+<!--        <app-carousel></app-carousel>-->
 
+        <div></div>
         <app-body>
-<!--            <el-carousel height="600px"  direction="vertical" :autoplay="false">-->
-<!--                <el-carousel-item v-for="item in urlList" :key="item.url">-->
-<!--                    <h3 class="medium"><img :src="item.url" alt=''/></h3>-->
-<!--                </el-carousel-item>-->
-<!--            </el-carousel>-->
             <div style="min-height: 85vh;margin-top: 0">
             <el-tabs v-model="labelName" type="card" @tab-click="handleClick">
                 <el-tab-pane label="全部" name="0"></el-tab-pane>
@@ -15,7 +12,7 @@
                 <el-tab-pane label="生活用品" name="2"></el-tab-pane>
                 <el-tab-pane label="运动相关" name="3"></el-tab-pane>
                 <el-tab-pane label="图书笔记" name="4"></el-tab-pane>
-                <el-tab-pane label="公告展示" name="5"></el-tab-pane>
+                <el-tab-pane label="社区帖子" name="5"></el-tab-pane>
 <!--                <el-tab-pane label="已被购买商品" name="6"></el-tab-pane>-->
             </el-tabs>
             <div style="margin: 0 20px;">
@@ -78,10 +75,12 @@
     import AppHead from '../common/AppHeader.vue';
     import AppBody from '../common/AppPageBody.vue'
     import AppFoot from '../common/AppFoot.vue'
+    import AppCarousel from '@/components/common/AppCarousel';
 
     export default {
         name: "index",
         components: {
+            AppCarousel,
             AppHead,
             AppBody,
             AppFoot
@@ -92,11 +91,7 @@
                 idleList: [],
                 currentPage: 1,
                 totalItem: 1,
-                urlList: [
-                    {url:"http://5b0988e595225.cdn.sohucs.com/images/20181023/bff9680896c44ccea379162c9eec1483.jpeg"},
-                    {url:'https://c01.gaitubao.net/FqEn34L2gM8GooPFyG1JaK8dBnho.jpg'},
-                    {url:'https://pics7.baidu.com/feed/9345d688d43f8794fe8261f36713abfe1ad53a84.jpeg'}
-                ]
+
             };
         },
         created() {

@@ -115,6 +115,9 @@ const api = {
         return request({
             url: '/idle/update',
             method: 'post',
+            headers: {
+                'Content-Type': 'application/json'
+            },
             data: data
         });
     },
@@ -140,6 +143,12 @@ const api = {
             method: 'post',
             data: data
         });
+    },
+    alipay(data){
+        return request({
+            url: '/alipay/pay',
+            method
+        })
     },
     getMyOrder(query) {
         return request({
@@ -204,6 +213,14 @@ const api = {
     checkFavorite(query) {
         return request({
             url: '/favorite/check',
+            method: 'get',
+            params: query
+        });
+    },
+
+    checkMyIdle(query) {
+        return request({
+            url: '/idle/check',
             method: 'get',
             params: query
         });

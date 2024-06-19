@@ -2,7 +2,11 @@
     <div class="header">
         <div class="header-container">
             <div class="app-name">
-                <router-link to="/">校易购二手闲置资源商城</router-link>
+                <router-link to="/">
+                    <img :src="logoPath" style='width: 60px; height: 60px; display: inline-block; vertical-align: middle;
+                                margin-right: 20px'/>
+                </router-link>
+
             </div>
             <div class="search-container">
                 <!-- 按回车触发函数  @keyup.enter.native -->
@@ -12,10 +16,10 @@
             </div>
             <el-button  type="primary" icon="el-icon-plus"  @click="toRelease">发布闲置/公告</el-button>
             <el-button type="primary" icon="el-icon-chat-dot-round" @click="toMessage">消息</el-button>
-            <el-button type="primary" icon="el-icon-shopping-cart-1" @click="toShopCart">我的购物车</el-button>
+<!--            <el-button type="primary" icon="el-icon-shopping-cart-1" @click="toShopCart">我的收藏</el-button>-->
             <router-link v-if="!isLogin" class="user-name-text" to="/login">登录</router-link>
             <el-dropdown trigger="click" v-else>
-                <div style="cursor:pointer;display: flex;align-items: center;">
+                <div style="cursor:pointer;display: flex;align-items: center; margin-left: 20px">
                     <div style="font-size: 16px;color: #409EFF;padding-right: 5px;">{{nickname}}</div>
                     <el-avatar :src="avatar"></el-avatar>
                 </div>
@@ -36,10 +40,12 @@
         props: ['searchInput','nicknameValue','avatarValue'],
         data() {
             return {
+                logoPath: "/logo.png",
                 searchValue: this.searchInput,
                 nickname:'登录',
                 avatar:'https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png',
-                isLogin:false
+                isLogin:false,
+                unreadMessagesCount:3
             };
         },
         created(){
@@ -86,11 +92,11 @@
                     this.$router.push({path: '/release'});
                 }
             },
-            toShopCart(){
-                if ('/shopCart' !== this.$route.path) {
-                    this.$router.push({path: '/shopCart'});
-                }
-            },
+            // toShopCart(){
+            //     if ('/shopCart' !== this.$route.path) {
+            //         this.$router.push({path: '/shopCart'});
+            //     }
+            // },
             /*这里的logout 只是用前端来删除掉浏览器中之前登录过的用户信息，并没有发送请求*/
             loginOut(){
                 this.$api.logout().then(res=>{
@@ -118,8 +124,8 @@
         left: 0;
         right: 0;
         width: 100%;
-        height: 7%;
-        background: #ffffff;
+        height: 60px;
+        background: #BCDDDB;
         display: flex;
         justify-content: center;
         border-bottom: #eeeeee solid ;
@@ -128,7 +134,7 @@
     }
 
     .header-container {
-        width: 1500px;
+        width: auto;
         height: 100%;
         display: flex;
         align-items: center;
@@ -151,5 +157,23 @@
         color: #409EFF;
         cursor: pointer;
         text-decoration: none;
+        left: 20px;
+        position: relative;
     }
+    .message-badge {
+        position: relative;
+        top: -5px; /* 调整红点相对于按钮的位置 */
+        left: 5px; /* 调整红点的水平位置 */
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background-color: red;
+        color: white;
+        text-align: center;
+        line-height: 20px; /* 使数字垂直居中 */
+        font-size: 9px;
+        font-weight: bold;
+    }
+
 </style>

@@ -3,9 +3,9 @@
         <app-head></app-head>
         <app-body>
             <div class="release-idle-container">
-                <div class="release-idle-container-title">发布闲置/公告</div>
+                <div class="release-idle-container-title">发布闲置/帖子</div>
                 <div class="release-idle-container-form">
-                    <el-input placeholder="请输入闲置/公告标题" v-model="idleItemInfo.idleName"
+                    <el-input placeholder="请输入闲置/帖子标题" v-model="idleItemInfo.idleName"
                               maxlength="30"
                               show-word-limit>
                     </el-input>
@@ -13,7 +13,7 @@
                             class="release-idle-detiles-text"
                             type="textarea"
                             autosize
-                            placeholder="请输入闲置/公告的详细介绍..."
+                            placeholder="请输入闲置/帖子的详细介绍..."
                             v-model="idleItemInfo.idleDetails"
                             maxlength="1000"
                             show-word-limit>
@@ -46,7 +46,11 @@
                                 <div slot="prepend">价格</div>
                             </el-input-number>
                         </div>
-
+                    </div>
+                    <div class="picture-list">
+                        <el-image style="width: 600px;margin-bottom: 2px;" fit="contain"
+                                  v-for="(img,index) in imgList" :key="index" :src="img"
+                                  :preview-src-list="imgList"></el-image>
                     </div>
                     <div class="release-idle-container-picture">
                         <div class="release-idle-container-picture-title">上传闲置照片</div>
@@ -65,11 +69,7 @@
                             <i class="el-icon-upload"></i>
                             <div class="el-upload__text">将图片拖到此处，或<em>点击上传</em></div>
                         </el-upload>
-                        <div class="picture-list">
-                            <el-image style="width: 600px;margin-bottom: 2px;" fit="contain"
-                                      v-for="(img,index) in imgList" :key="index" :src="img"
-                                      :preview-src-list="imgList"></el-image>
-                        </div>
+
                         <el-dialog :visible.sync="imgDialogVisible">
                             <img width="100%" :src="dialogImageUrl" alt="">
                         </el-dialog>
@@ -125,7 +125,7 @@
                     label: '图书笔记'
                 }, {
                     value: 5,
-                    label: '公告展示'
+                    label: '社区帖子'
                 }],
                 imgList:[],
                 idleItemInfo:{

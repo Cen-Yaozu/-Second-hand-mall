@@ -18,9 +18,9 @@
                     <div class="login-submit">
                         <el-button type="primary" @click="login">登录</el-button>
                     </div>
-                    <div class="other-submit">
-                        <router-link to="/login" class="sign-in-text">学生登录</router-link>
-                    </div>
+<!--                    <div class="other-submit">-->
+<!--                        <router-link to="/login" class="sign-in-text">学生登录</router-link>-->
+<!--                    </div>-->
                 </el-form>
             </div>
         </el-card>

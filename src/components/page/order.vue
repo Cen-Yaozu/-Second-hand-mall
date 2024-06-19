@@ -29,22 +29,22 @@
                         <el-form :model="addressForm" ref="addressForm" label-width="100px" @submit.prevent="handleSubmit">
                             <!-- 手机号 -->
                             <el-form-item label="手机号" prop="phone">
-                                <el-input v-model="addressForm.phone" placeholder="请输入手机号"></el-input>
+                                <el-input v-model="addressForm.consigneePhone" placeholder="请输入手机号"></el-input>
                             </el-form-item>
 
                             <!-- 姓名 -->
                             <el-form-item label="姓名" prop="name">
-                                <el-input v-model="addressForm.name" placeholder="请输入姓名"></el-input>
+                                <el-input v-model="addressForm.consigneeName" placeholder="请输入姓名"></el-input>
                             </el-form-item>
 
                             <!-- 具体地址 -->
                             <el-form-item label="具体地址" prop="detail">
-                                <el-input v-model="addressForm.detail" type="textarea" placeholder="请输入详细地址"></el-input>
+                                <el-input v-model="addressForm.detailAddress" type="textarea" placeholder="请输入详细地址"></el-input>
                             </el-form-item>
 
 <!--                            <div slot="footer" class="dialog-footer">-->
                                 <el-button @click="innerVisible = false">取 消</el-button>
-                                <el-button type="primary">保 存</el-button>
+                                <el-button type="primary" @click="saveAddress">保 存</el-button>
 <!--                            </div>-->
                         </el-form>
                     </el-dialog>
@@ -126,10 +126,15 @@
                 addressData: [],
                 orderStatus: ['待付款', '待发货', '待收货', '已完成', '已取消'],
                 addressForm: {
-                    phone: '',
-                    name: '',
-                    detail: '',
+                    consigneeName: '',
+                    consigneePhone: '',
+                    provinceName: '',
+                    cityName: '',
+                    regionName: '',
+                    detailAddress: '',
+                    defaultFlag: false
                 },
+                selectedOptions: [],//存放默认值
                 orderInfo: {
                     createTime: "",
                     id: 0,
@@ -202,6 +207,33 @@
             })
         },
         methods: {
+            saveAddress(){
+                this.$api.addAddress(this.addressForm).then(res => {
+                    if (res.status_code === 1) {
+                        this.$message({
+                            message: '新增成功！',
+                            type: 'success'
+                        });
+                        this.selectedOptions = [];
+                        this.addressInfo = {
+                            consigneeName: '',
+                            consigneePhone: '',
+                            provinceName: '',
+                            cityName: '',
+                            regionName: '',
+                            detailAddress: '',
+                            defaultFlag: false
+                        };
+                        this.innerVisible = false;
+                        this.getAddressData();
+                    } else {
+                        this.$message.error('系统异常，新增失败！')
+                    }
+                }).catch(e => {
+                    this.$message.error('网络异常！')
+                })
+            },
+
             handleSubmit(){
 
             },
@@ -246,7 +278,7 @@
                 })
             },
             selectAddress(i,item){
-                this.addressDialogVisible=false;
+                // this.addressDialogVisible=false;
                 console.log(item,this.addressInfo);
                 this.addressInfo.consigneeName=item.consigneeName;
                 this.addressInfo.consigneePhone=item.consigneePhone;
@@ -286,35 +318,39 @@
                             cancelButtonText: '取消',
                             type: 'warning'
                         }).then(() => {
+                            var address = "http://localhost:8080/alipay/pay?subject=" + orderInfo.orderNumber+ "&traceNo="+
+                                orderInfo.id + "&totalAmount=" + orderInfo.idleItem.idlePrice;
 
-                                this.$api.updateOrder({
-                                    id: orderInfo.id,
-                                    orderStatus: orderStatus,
-                                    paymentStatus: 1,
-                                    paymentWay: '支付宝',
-                                }).then(res => {
+                            // console.log(res.data[0]);
+                            // res.data.
+                            window.open(address)
 
-
-                                    var address = "http://localhost:8080/alipay/pay?name=" + orderInfo.id + "&no="+
-                                      Math.random().toString(36).substr(2) + "&price=" + orderInfo.idleItem.idlePrice;
-
-                                    console.log(res.data[0]);
-                                    // res.data.
-                                    window.open(address)
-
-                                    if (res.status_code === 1) {
-                                        this.$message({
-                                            message: '支付成功！',
-                                            type: 'success'
-                                        });
-                                        this.orderInfo.orderStatus = orderStatus;
-                                        this.orderInfo.paymentStatus = 1;
-                                        this.orderInfo.paymentWay = '支付宝';
-                                        this.orderInfo.paymentTime = res.data.paymentTime;
-                                    }
-                                })
-
-                        }).catch(() => {
+                        //     this.$api.updateOrder({
+                        //             id: orderInfo.id,
+                        //             orderStatus: orderStatus,
+                        //             paymentStatus: 1,
+                        //             paymentWay: '支付宝',
+                        //         }).then(res => {
+                        //             var address = "http://localhost:8080/alipay/pay?name=" + orderInfo.id + "&no="+
+                        //               Math.random().toString(36).substr(2) + "&price=" + orderInfo.idleItem.idlePrice;
+                        //
+                        //             console.log(res.data[0]);
+                        //             // res.data.
+                        //             window.open(address)
+                        //
+                        //             if (res.status_code === 1) {
+                        //                 this.$message({
+                        //                     message: '支付成功！',
+                        //                     type: 'success'
+                        //                 });
+                        //                 this.orderInfo.orderStatus = orderStatus;
+                        //                 this.orderInfo.paymentStatus = 1;
+                        //                 this.orderInfo.paymentWay = '支付宝';
+                        //                 this.orderInfo.paymentTime = res.data.paymentTime;
+                        //             }
+                        //         })
+                        //
+                        // }).catch(() => {
                         });
                     }
                 } else {

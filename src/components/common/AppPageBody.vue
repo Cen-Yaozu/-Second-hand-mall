@@ -17,10 +17,11 @@
         margin-top: 90px;
         display: flex;
         justify-content: center;
+        background-color: #BCDDDB;
     }
     .main-content{
-        width: 1700px;
-        background-color: #ffffff;
+        width: 70%;
+        background-color: #BCDDDB;
         min-height: 90vh;
     }
 </style>

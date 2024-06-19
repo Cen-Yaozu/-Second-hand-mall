@@ -50,8 +50,16 @@ public class OrderServiceImpl  extends ServiceImpl<OrderDao, OrderModel> impleme
      * @return
      */
 
+
+    /**
+     * 定义一个静态代码块，用于初始化锁映射表。
+     * 锁映射表使用HashMap来存储，其中键为整数，值为ReentrantLock类型。
+     * 这个映射表在类加载时被初始化，为0到99的每个整数分配一个公平的ReentrantLock。
+     * 公平锁意味着获取锁的线程将按照它们到达的顺序被调度。
+     */
     private static HashMap<Integer,ReentrantLock> lockMap=new HashMap<>();
     static {
+        // 初始化lockMap，为每一个可能的线程分配一个公平的锁
 //        ReentrantLock lock=new ReentrantLock(true);
         for(int i=0;i<100;i++){
             lockMap.put(i,new ReentrantLock(true));
@@ -69,38 +77,59 @@ public class OrderServiceImpl  extends ServiceImpl<OrderDao, OrderModel> impleme
         idleItem.setIdleStatus((byte)2);
 
 
-        /*订单锁*/
-        int key= (int) (orderModel.getIdleId()%100);
-        ReentrantLock lock=lockMap.get(key);
+        /*
+         * 使用订单锁来保证订单操作的线程安全。
+         *
+         * @param idleItem 闲置物品信息
+         * @param orderModel 订单模型
+         * @return boolean 添加订单是否成功的标志
+         */
+        int key= (int) (orderModel.getIdleId()%100); // 根据订单ID计算锁的索引
+        ReentrantLock lock=lockMap.get(key); // 从锁映射中获取对应的锁
         boolean flag;
         try {
-            lock.lock();
-            flag=addOrderHelp(idleItem,orderModel);
+            lock.lock(); // 获取锁
+            flag=addOrderHelp(idleItem,orderModel); // 尝试添加订单
         }finally {
-            lock.unlock();
+            lock.unlock(); // 释放锁
         }
-        return flag;
+        return flag; // 返回添加订单的结果
+
     }
 
 
+
+    /**
+     * 添加订单辅助方法
+     * @param idleItem 闲置物品模型，包含闲置物品的相关信息
+     * @param orderModel 订单模型，包含订单的相关信息
+     * @return boolean 返回true表示订单添加成功，返回false表示订单添加失败
+     */
     @Transactional(rollbackFor = Exception.class)
-    public boolean addOrderHelp(IdleItemModel idleItem,OrderModel orderModel){
-        IdleItemModel idleItemModel=idleItemDao.selectByPrimaryKey(orderModel.getIdleId());
-        if(idleItemModel.getIdleStatus()!=1){
+    public boolean addOrderHelp(IdleItemModel idleItem, OrderModel orderModel){
+        // 根据闲置物品ID查询闲置物品信息
+        IdleItemModel idleItemModel = idleItemDao.selectByPrimaryKey(orderModel.getIdleId());
+        // 检查闲置物品状态是否为可用（1）
+        if (idleItemModel.getIdleStatus() != 1) {
             return false;
         }
-        if(idleItemDao.updateByPrimaryKeySelective(idleItem)==1){
-            if(orderDao.insert(orderModel)==1){
+        // 更新闲置物品状态为已售出
+        if (idleItemDao.updateByPrimaryKeySelective(idleItem) == 1) {
+            // 插入新订单
+            if (orderDao.insert(orderModel) == 1) {
+                // 设置订单状态为待支付（4）
                 orderModel.setOrderStatus((byte) 4);
-                //半小时未支付则取消订单
-                OrderTaskHandler.addOrder(new OrderTask(orderModel,30*60));
+                // 添加订单任务，如果订单在半小时内未支付则取消订单
+                OrderTaskHandler.addOrder(new OrderTask(orderModel, 30 * 60));
                 return true;
-            }else {
+            } else {
+                // 如果订单插入失败，抛出运行时异常
                 new RuntimeException();
             }
         }
         return false;
     }
+
 
     /**
      * 获取订单信息，同时获取对应的闲置信息

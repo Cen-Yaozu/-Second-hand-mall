@@ -93,32 +93,40 @@ public class IdleItemServiceImpl  extends ServiceImpl<IdleItemDao, IdleItemModel
 
 
     /**
-     * 分类查询，分页
-     * 同时查出闲置发布者的信息，代码结构与上面的类似，可封装优化，或改为join查询
-     * @param idleLabel
-     * @param page
-     * @param nums
-     * @return
+     * 根据标签查找闲置物品的分页信息。
+     *
+     * @param idleLabel 闲置物品的标签。
+     * @param page 请求的页码。
+     * @param nums 每页显示的数量。
+     * @return 返回包含闲置物品列表和总数的分页信息对象。
      */
     public PageVo<IdleItemModel> findIdleItemByLable(int idleLabel, int page, int nums) {
+        // 通过标签、页码和每页数量从数据库获取闲置物品列表
         List<IdleItemModel> list=idleItemDao.findIdleItemByLable(idleLabel, (page - 1) * nums, nums);
         if(list.size()>0){
+            // 初始化用户ID列表，用于后续查询用户信息
             List<Long> idList=new ArrayList<>();
             for(IdleItemModel i:list){
                 idList.add(i.getUserId());
             }
+            // 根据用户ID列表查询用户信息
             List<UserModel> userList=userDao.findUserByList(idList);
+            // 将用户信息映射到ID上，方便后续关联闲置物品和用户
             Map<Long,UserModel> map=new HashMap<>();
             for(UserModel user:userList){
                 map.put(user.getId(),user);
             }
+            // 关联每个闲置物品和它的用户信息
             for(IdleItemModel i:list){
                 i.setUser(map.get(i.getUserId()));
             }
         }
+        // 统计符合标签条件的闲置物品总数
         int count=idleItemDao.countIdleItemByLable(idleLabel);
+        // 构造并返回分页信息对象
         return new PageVo<>(list,count);
     }
+
 
     /**
      * 更新闲置信息
@@ -149,6 +157,15 @@ public class IdleItemServiceImpl  extends ServiceImpl<IdleItemDao, IdleItemModel
         return new PageVo<>(list,count);
     }
 
+    @Override
+    public boolean isMyIdle(Long shUserId, Long idleId) {
+        IdleItemModel idleItemModel = idleItemDao.selectByPrimaryKey(idleId);
+
+        if (idleItemModel.getUserId().equals(shUserId)){
+            return true;
+        }
+        return false;
+    }
 
 
     // 根据不同的状态查找闲置物品

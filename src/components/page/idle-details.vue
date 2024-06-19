@@ -14,26 +14,65 @@
                             <div class="details-header-user-info-time">{{idleItemInfo.user.signInTime.substring(0,10)}} 加入平台</div>
                         </div>
                     </div>
-                    <div class="details-header-buy" :style="'width:'+(isMaster?'150px;':'280px;')">
+                    <div class="details-header-buy" :style="'width:'+(isMaster?'250px;':'280px;')">
                         <div v-show="idleItemInfo.idlePrice !== 0" style="color: red;font-size: 18px;font-weight: 600;">￥{{idleItemInfo.idlePrice}}</div>
                         <div v-if="!isMaster&&idleItemInfo.idleStatus!==1" style="color: red;font-size: 16px;">闲置已下架或删除</div>
                         <el-button v-show="idleItemInfo.idlePrice > 0" v-if="!isMaster&&idleItemInfo.idleStatus===1" type="danger" plain @click="buyButton(idleItemInfo)">立即购买</el-button>
-                        <el-button v-show="idleItemInfo.idlePrice > 0" v-if="!isMaster&&idleItemInfo.idleStatus===1" type="primary" plain @click="favoriteButton(idleItemInfo)">{{isFavorite?'取消购物车':'加入购物车'}}</el-button>
+                        <el-button v-show="idleItemInfo.idlePrice > 0" v-if="!isMaster&&idleItemInfo.idleStatus===1" type="primary" plain @click="favoriteButton(idleItemInfo)">{{isFavorite?'取消收藏':'加入收藏'}}</el-button>
+                        <el-button
+                            v-show='idleItemInfo.idlePrice >= 0'
+                            v-if="isMaster&&idleItemInfo.idleStatus===1"
+                            type='primary'
+                            plain
+                            @click="isEditing ? saveChanges(idleItemInfo) : editButton()">{{ buttonText }}</el-button>
                         <el-button v-if="isMaster&&idleItemInfo.idleStatus===1" type="danger" @click="changeStatus(idleItemInfo,2)" plain>下架</el-button>
                         <el-button v-if="isMaster&&idleItemInfo.idleStatus===2" type="primary" @click="changeStatus(idleItemInfo,1)" plain>重新上架</el-button>
                     </div>
                 </div>
 
+
                 <div class="details-info">
-                    <div class="details-info-title">{{idleItemInfo.idleName}}</div>
-                    <div class="details-info-main" v-html="idleItemInfo.idleDetails">
-                        {{idleItemInfo.idleDetails}}
+
+                    <div v-if="isEditing">
+                        <label class="input-label">价格</label>
+                        <el-input v-model="idleItemInfo.idlePrice" placeholder="请输入商品价格"></el-input>
                     </div>
+                    <div class="details-info-title" v-if="isEditing">
+                        <label class="input-label">名称</label>
+                        <el-input v-model="idleItemInfo.idleName" placeholder="请输入商品名称"></el-input>
+                    </div>
+                    <div class="details-info-title" v-else>
+                        {{idleItemInfo.idleName}}
+                    </div>
+                    <div v-if="isEditing">
+                        <label class="input-label">详情</label>
+                        <el-input type="textarea" autosize placeholder="请输入商品详情..." v-model="idleItemInfo.idleDetails"></el-input>
+                    </div>
+                    <div class="details-info-main" v-else v-html="idleItemInfo.idleDetails"></div>
                     <div class="details-picture">
-                        <el-image v-for="(imgUrl,i) in idleItemInfo.pictureList" :key= i
-                                  style="width: 90%;margin-bottom: 2px;"
-                                  :src="imgUrl"
-                                  fit="contain"></el-image>
+                        <template v-if="isEditing">
+                            <!-- 编辑模式下的上传控件 -->
+                            <el-upload
+                                :on-remove="fileHandleRemove"
+                                :on-success="fileHandleSuccess"
+                                :on-change="imgChange"
+                                action="http://localhost:8080/file/"
+                                list-type="picture-card"
+                                :file-list="fileList"
+                            >
+                                <i class="el-icon-plus"></i>
+                            </el-upload>
+                        </template>
+                        <template v-else>
+                            <!-- 显示模式下的图片列表 -->
+                                <el-image
+                                    v-for="(imgUrl, i) in idleItemInfo.pictureList"
+                                    :key="i"
+                                    style="width: 90%; margin-bottom: 2px;"
+                                    :src="imgUrl"
+                                    fit="contain"
+                                ></el-image>
+                        </template>
                     </div>
                 </div>
 
@@ -97,6 +136,8 @@
         },
         data() {
             return {
+                buttonText:'编辑',
+                isEditing:false,
                 messageContent:'',
                 toUser:null,
                 toMessage:null,
@@ -122,42 +163,99 @@
                         signInTime:''
                     },
                 },
+                editingIdleItem:null,
                 isMaster:false,
                 isFavorite:true,
                 favoriteId:0
             };
         },
+        computed: {
+            fileList() {
+                return this.idleItemInfo.pictureList.map(img => ({ url: img }));
+            }
+        },
         created(){
-            let id=this.$route.query.id;
-            this.$api.getIdleItem({
-                id:id
-            }).then(res=>{
-                console.log(res);
-                if(res.data){
-                    let list=res.data.idleDetails.split(/\r?\n/);
-                    let str='';
-                    for(let i=0;i<list.length;i++){
-                        str+='<p>'+list[i]+'</p>';
-                    }
-                    res.data.idleDetails=str;
-                    res.data.pictureList=JSON.parse(res.data.pictureList);
-                    this.idleItemInfo=res.data;
-                    console.log(this.idleItemInfo);
-                    let userId=this.getCookie('shUserId');
-                    console.log('userid',userId)
-                    if(userId == this.idleItemInfo.userId){
-                        console.log('isMaster');
-                        this.isMaster=true;
-                    }
-                    this.checkFavorite();
-                    this.getAllIdleMessage();
-                }
-                $('html,body').animate({
-                    scrollTop: 0
-                }, {duration: 500, easing: "swing"});
-            });
+            this.getMyIdleById();
         },
         methods: {
+            getMyIdleById(){
+                let id=this.$route.query.id;
+                this.$api.getIdleItem({
+                    id:id
+                }).then(res=>{
+                    console.log(res);
+                    if(res.data){
+                        let list=res.data.idleDetails.split(/\r?\n/);
+                        let str='';
+                        for(let i=0;i<list.length;i++){
+                            str+=list[i];
+                        }
+                        res.data.idleDetails=str;
+                        res.data.pictureList=JSON.parse(res.data.pictureList);
+                        this.idleItemInfo=res.data;
+                        console.log(this.idleItemInfo);
+                        let userId=this.getCookie('shUserId');
+                        console.log('userid',userId)
+                        if(userId == this.idleItemInfo.userId){
+                            console.log('isMaster');
+                            this.isMaster=true;
+                        }
+                        this.checkFavorite();
+                        this.checkMyIdle();
+                        this.getAllIdleMessage();
+                    }
+                    $('html,body').animate({
+                        scrollTop: 0
+                    }, {duration: 500, easing: "swing"});
+                });
+            },
+            saveChanges(idleItemInfo) {
+                const updatedInfo = {
+                    ...idleItemInfo,
+                    pictureList: JSON.stringify(this.idleItemInfo.pictureList),
+                };
+                // 这里添加调用API更新商品信息的逻辑
+                this.$api.updateIdleItem(updatedInfo).then(() => {
+                    // this.getMyIdleById();
+                    this.$message.success('商品信息更新成功');
+                    this.isEditing = false; // 保存后关闭编辑模式
+                    this.buttonText = '编辑商品'
+                }).catch(() => {
+                    this.$message.error('更新失败，请重试');
+                });
+            },
+            imgChange(file, fileList){
+                this.noneBtnImg = fileList.length >= this.limitCountImg;
+            },
+            fileHandleRemove(file,fileList) {
+                console.log(file, fileList);
+                // 假设fileList是由el-upload维护的，这里需要间接操作，找到file在fileList中的URL
+                const urlToRemove = file.url; // 假设file.response.data是图片URL
+                // 假设fileList与idleItemInfo.pictureList同步，直接根据URL移除
+                const index = this.idleItemInfo.pictureList.indexOf(urlToRemove);
+                console.log(this)
+
+                if (index > -1) {
+                    // 找到了匹配的URL，从idleItemInfo.pictureList中移除
+                    this.idleItemInfo.pictureList.splice(index, 1);
+                    this.$forceUpdate();
+                } else {
+                    console.warn('URL not found in the list to remove.');
+                }
+            },
+            fileHandlePreview(file) {
+                console.log(file);
+                this.dialogImageUrl=file.response.data;
+                this.imgDialogVisible=true;
+            },
+            fileHandleSuccess(response, file, fileList){
+                console.log("file:",response,file,fileList);
+                this.idleItemInfo.pictureList.push(response.data);
+            },
+            editButton(){
+                this.isEditing = !this.isEditing;
+                this.buttonText = '保存修改'
+            },
             getAllIdleMessage(){
                 this.$api.getAllIdleMessage({
                     idleId:this.idleItemInfo.id
@@ -177,6 +275,17 @@
                         this.isFavorite=false;
                     }else {
                         this.favoriteId=res.data;
+                    }
+                })
+            },
+            checkMyIdle(){
+                this.$api.checkMyIdle({
+                    idleId:this.idleItemInfo.id
+                }).then(res=>{
+                    if (res.data){
+                        this.isMaster = true;
+                    }else {
+                        this.isMaster = false;
                     }
                 })
             },
@@ -236,7 +345,7 @@
                         console.log(res);
                         if(res.status_code===1){
                             this.$message({
-                                message: '已取消购物车！',
+                                message: '已取消收藏！',
                                 type: 'success'
                             });
                             this.isFavorite=false;
@@ -252,7 +361,7 @@
                         console.log(res);
                         if(res.status_code===1){
                             this.$message({
-                                message: '已加入购物车！',
+                                message: '已加入收藏！',
                                 type: 'success'
                             });
                             this.isFavorite=true;
@@ -271,6 +380,7 @@
                 this.replyData.toUserNickname='';
                 this.replyData.toMessage='';
             },
+
             sendMessage(){
                 let content=this.messageContent.trim();
                 if(this.toUser==null){

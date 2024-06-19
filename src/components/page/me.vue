@@ -74,7 +74,7 @@
                     <el-tabs v-model="activeName" @tab-click="handleClick">
                         <el-tab-pane label="刚刚发布" name="1"></el-tab-pane>
                         <el-tab-pane label="已经下架" name="2"></el-tab-pane>
-<!--                        <el-tab-pane label="我的购物车" name="3"></el-tab-pane>-->
+                        <el-tab-pane label="我的收藏" name="3"></el-tab-pane>
                         <el-tab-pane label="出售记录" name="4"></el-tab-pane>
                         <el-tab-pane label="购买记录" name="5"></el-tab-pane>
                     </el-tabs>
@@ -111,16 +111,6 @@
                         </div>
                     </div>
                 </div>
-
-
-
-
-
-
-
-
-
-
             </div>
             <div v-show="eidtAddress" class="address-container">
                 <el-page-header class="address-container-back" @back="eidtAddress=false"
@@ -237,7 +227,7 @@
                     defaultFlag: false
                 },
                 activeName: '1',
-                handleName: ['下架', '删除', '取消购物车', '', ''],
+                handleName: ['下架', '删除', '取消收藏', '', ''],
                 dataList: [
                     [],
                     [],
@@ -284,29 +274,29 @@
             this.getAddressData();
             this.getIdleItemData();
             this.getMyOrder();
-            // this.getMySoldIdle();
+            this.getMySoldIdle();
             this.getMyFavorite();
         },
         methods: {
-            // getMyFavorite(){
-            //     this.$api.getMyFavorite().then(res=>{
-            //         console.log('getMyFavorite',res);
-            //         if (res.status_code === 1){
-            //             for (let i = 0; i < res.data.length; i++) {
-            //                 let pictureList = JSON.parse(res.data[i].idleItem.pictureList);
-            //                 this.dataList[2].push({
-            //                     favoriteId:res.data[i].id,
-            //                     id:res.data[i].idleItem.id,
-            //                     imgUrl:pictureList.length > 0 ? pictureList[0] : '',
-            //                     idleName:res.data[i].idleItem.idleName,
-            //                     idleDetails:res.data[i].idleItem.idleDetails,
-            //                     timeStr:res.data[i].createTime.substring(0, 10) + " " + res.data[i].createTime.substring(11, 19),
-            //                     idlePrice:res.data[i].idleItem.idlePrice
-            //                 });
-            //             }
-            //         }
-            //     })
-            // },
+            getMyFavorite(){
+                this.$api.getMyFavorite().then(res=>{
+                    console.log('getMyFavorite',res);
+                    if (res.status_code === 1){
+                        for (let i = 0; i < res.data.length; i++) {
+                            let pictureList = JSON.parse(res.data[i].idleItem.pictureList);
+                            this.dataList[2].push({
+                                favoriteId:res.data[i].id,
+                                id:res.data[i].idleItem.id,
+                                imgUrl:pictureList.length > 0 ? pictureList[0] : '',
+                                idleName:res.data[i].idleItem.idleName,
+                                idleDetails:res.data[i].idleItem.idleDetails,
+                                timeStr:res.data[i].createTime.substring(0, 10) + " " + res.data[i].createTime.substring(11, 19),
+                                idlePrice:res.data[i].idleItem.idlePrice
+                            });
+                        }
+                    }
+                })
+            },
             getMySoldIdle(){
                 this.$api.getMySoldIdle().then(res=>{
                     if (res.status_code === 1){
@@ -490,21 +480,21 @@
                     cancelButtonText: '取消',
                     type: 'warning'
                 }).then(() => {
-                    if(activeName==='1'){
+                    if (activeName === '1') {
                         this.$api.updateIdleItem({
-                            id:item.id,
-                            idleStatus:2
-                        }).then(res=>{
+                            id: item.id,
+                            idleStatus: 2
+                        }).then(res => {
                             console.log(res);
-                            if(res.status_code===1){
-                                this.dataList[0].splice(index,1);
-                                item.idleStatus=2;
+                            if (res.status_code === 1) {
+                                this.dataList[0].splice(index, 1);
+                                item.idleStatus = 2;
                                 this.dataList[1].unshift(item);
-                            }else {
+                            } else {
                                 this.$message.error(res.msg)
                             }
                         });
-                    }else if(activeName==='2') {
+                    } else if (activeName === '2') {
                         this.$api.updateIdleItem({
                             id: item.id,
                             idleStatus: 0
@@ -516,30 +506,24 @@
                                 this.$message.error(res.msg)
                             }
                         });
+                    } else if (activeName === '3') {
+                        this.$api.deleteFavorite({
+                            id: item.favoriteId
+                        }).then(res => {
+                            console.log(res);
+                            if (res.status_code === 1) {
+                                this.$message({
+                                    message: '已取消收藏！',
+                                    type: 'success'
+                                });
+                                this.dataList[2].splice(index, 1);
+                            } else {
+                                this.$message.error(res.msg)
+                            }
+                        }).catch(e => {
+                        });
                     }
-                    /*
-                    * 购物车取消功能
-                    * */
-                    // }else if(activeName==='3'){
-                    //     this.$api.deleteFavorite({
-                    //         id: item.favoriteId
-                    //     }).then(res=>{
-                    //         console.log(res);
-                    //         if(res.status_code===1){
-                    //             this.$message({
-                    //                 message: '已取消购物车！',
-                    //                 type: 'success'
-                    //             });
-                    //             this.dataList[2].splice(index,1);
-                    //         }else {
-                    //             this.$message.error(res.msg)
-                    //         }
-                    //     }).catch(e=>{
-                    //     })
-                    // }
-                }).catch(() => {
-                });
-
+                })
             },
             fileHandleSuccess(response, file, fileList) {
                 console.log("file:", response, file, fileList);

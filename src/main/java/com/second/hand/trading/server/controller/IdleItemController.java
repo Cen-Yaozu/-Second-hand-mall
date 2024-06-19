@@ -90,4 +90,12 @@ public class IdleItemController {
         }
         return ResultVo.fail(ErrorMsg.SYSTEM_ERROR);
     }
+
+    @GetMapping("check")
+    public ResultVo checkMyIdle(@CookieValue("shUserId")
+                                  @NotNull(message = "登录异常 请重新登录")
+                                  @NotEmpty(message = "登录异常 请重新登录") String shUserId,
+                                  @RequestParam Long idleId){
+        return ResultVo.success(idleItemService.isMyIdle(Long.valueOf(shUserId),idleId));
+    }
 }

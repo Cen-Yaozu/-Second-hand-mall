@@ -60,4 +60,5 @@ public interface IdleItemService extends IService<IdleItemModel> {
 
     PageVo<IdleItemModel> adminGetIdleList(int status, int page, int nums) ;
 
+    boolean isMyIdle(Long shUserId, Long idleId);
 }

@@ -101,8 +101,8 @@ public class OrderController {
 
     @GetMapping("/my-sold")
     public ResultVo getMySoldIdle(@CookieValue("shUserId")
-                               @NotNull(message = "登录异常 请重新登录")
-                               @NotEmpty(message = "登录异常 请重新登录") String shUserId){
+                                      @NotNull(message = "登录异常 请重新登录")
+                                      @NotEmpty(message = "登录异常 请重新登录") String shUserId){
         return ResultVo.success(orderService.getMySoldIdle(Long.valueOf(shUserId)));
     }
 }
