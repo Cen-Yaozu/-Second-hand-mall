@@ -1,103 +1,119 @@
 <template>
-	<div class="main-border">
-		<el-menu default-active="1" class="el-menu-demo" mode="horizontal" @select="handleSelect">
-        <span class="app-title">
-						<el-input placeholder="闲置名称..." v-model="findValue" @keyup.enter.native="searchIdle">
-							<el-button slot="append" icon="el-icon-search" @click="searchIdle"></el-button>
-						</el-input>
-				</span>
-			<el-menu-item @click="status=1" index="1">上线的闲置</el-menu-item>
-			<el-menu-item @click="status =2" index="2">下架的闲置</el-menu-item>
-		</el-menu>
-		<el-table v-if="this.mode == 1"
-							:data="onlineGoods"
-							stripe
-							style="width: 100%;color: #5a5c61;">
-			<el-table-column
-				prop="releaseTime"
-				label="发布日期"
-				width="200">
-			</el-table-column>
-			<el-table-column
-				prop="idleName"
-				label="闲置名称"
-				show-overflow-tooltip
-			>
-			</el-table-column>
-			<el-table-column
-				prop="user.nickname"
-				label="发布用户"
-				show-overflow-tooltip
-				min-width="100"
-				width="100">
-			</el-table-column>
-			<el-table-column
-				prop="idlePrice"
-				label="价格"
-				show-overflow-tooltip
-				min-width="100"
-				width="100">
-			</el-table-column>
-			<el-table-column label="操作">
-				<template slot-scope="scope">
-					<el-button
-						size="mini"
-						type="danger"
-						@click="handleOfflineGoods(scope.$index)">违规下架
-					</el-button>
+	<div class="idle-goods-container">
+		<div class="idle-header">
+			<el-tabs v-model="status" @tab-click="handleSelect" type="border-card">
+				<el-tab-pane label="上线的闲置" name="1"></el-tab-pane>
+				<el-tab-pane label="下架的闲置" name="2"></el-tab-pane>
+			</el-tabs>
+			<div class="search-box">
+				<el-input 
+					placeholder="闲置名称..." 
+					v-model="findValue" 
+					@keyup.enter.native="searchIdle"
+					class="search-input"
+					prefix-icon="el-icon-search">
+					<el-button slot="append" icon="el-icon-search" @click="searchIdle"></el-button>
+				</el-input>
+			</div>
+		</div>
 
-				</template>
-			</el-table-column>
-		</el-table>
+		<div class="idle-table-wrapper">
+			<el-table
+				v-if="mode == 1"
+				:data="onlineGoods"
+				stripe
+				border
+				highlight-current-row
+				class="idle-table">
+				<el-table-column
+					prop="releaseTime"
+					label="发布日期"
+					width="180">
+				</el-table-column>
+				<el-table-column
+					prop="idleName"
+					label="闲置名称"
+					show-overflow-tooltip>
+				</el-table-column>
+				<el-table-column
+					prop="user.nickname"
+					label="发布用户"
+					show-overflow-tooltip
+					width="120">
+				</el-table-column>
+				<el-table-column
+					prop="idlePrice"
+					label="价格"
+					width="100">
+					<template slot-scope="scope">
+						<span class="price">¥{{ scope.row.idlePrice }}</span>
+					</template>
+				</el-table-column>
+				<el-table-column label="操作" width="120" fixed="right">
+					<template slot-scope="scope">
+						<el-button
+							size="mini"
+							type="danger"
+							icon="el-icon-delete"
+							@click="handleOfflineGoods(scope.$index)">下架
+						</el-button>
+					</template>
+				</el-table-column>
+			</el-table>
 
-		<el-table v-show="this.mode == 2"
-							:data="OfflineGoods"
-							stripe
-							style="width: 100%;color: #5a5c61;">
-			<el-table-column
-				prop="releaseTime"
-				label="发布日期"
-				width="200">
-			</el-table-column>
-			<el-table-column
-				prop="idleName"
-				label="闲置名称"
-				show-overflow-tooltip
-			>
-			</el-table-column>
-			<el-table-column
-				prop="user.nickname"
-				label="发布用户"
-				show-overflow-tooltip
-				min-width="100"
-				width="100">
-			</el-table-column>
-			<el-table-column
-				prop="idlePrice"
-				label="价格"
-				show-overflow-tooltip
-				min-width="100"
-				width="100">
-			</el-table-column>
-			<el-table-column label="操作">
-				<template slot-scope="scope">
-					<el-button
-						size="mini"
-						type="danger"
-						@click="deleteGoods(scope.$index)">永久删除
-					</el-button>
-				</template>
-			</el-table-column>
-		</el-table>
-		<div class="block">
-			<el-pagination
-				@current-change="handleCurrentChange"
-				:current-page.sync="nowPage"
-				:page-size="8"
-				background
-				layout="prev, pager, next,jumper"
-				:total="total">
-			</el-pagination>
+			<el-table
+				v-show="mode == 2"
+				:data="OfflineGoods"
+				stripe
+				border
+				highlight-current-row
+				class="idle-table">
+				<el-table-column
+					prop="releaseTime"
+					label="发布日期"
+					width="180">
+				</el-table-column>
+				<el-table-column
+					prop="idleName"
+					label="闲置名称"
+					show-overflow-tooltip>
+				</el-table-column>
+				<el-table-column
+					prop="user.nickname"
+					label="发布用户"
+					show-overflow-tooltip
+					width="120">
+				</el-table-column>
+				<el-table-column
+					prop="idlePrice"
+					label="价格"
+					width="100">
+					<template slot-scope="scope">
+						<span class="price">¥{{ scope.row.idlePrice }}</span>
+					</template>
+				</el-table-column>
+				<el-table-column label="操作" width="120" fixed="right">
+					<template slot-scope="scope">
+						<el-button
+							size="mini"
+							type="danger"
+							icon="el-icon-delete"
+							@click="deleteGoods(scope.$index)">删除
+						</el-button>
+					</template>
+				</el-table-column>
+			</el-table>
+
+			<div class="pagination-container">
+				<el-pagination
+					@current-change="handleCurrentChange"
+					:current-page.sync="nowPage"
+					:page-size="8"
+					background
+					layout="prev, pager, next, jumper"
+					:total="total">
+				</el-pagination>
+			</div>
 		</div>
 	</div>
 </template>
@@ -113,7 +129,7 @@
                 onlineGoods: [],
                 OfflineGoods: [],
                 findValue: '',
-								status: 1
+								status: "1"
             }
         },
         created() {
@@ -138,7 +154,7 @@
                     findValue: this.findValue,
                     page: this.nowPage,
                     nums: 8,
-										status: this.status
+										status: parseInt(this.status)
                 }).then(res => {
                     console.log(res);
                     if (res.status_code == 1 && res.data.list != null) {
@@ -165,7 +181,8 @@
                     this.getOfflineGoods();
                 }
             },
-            handleSelect(val) {
+            handleSelect(tab) {
+                const val = parseInt(tab.name);
                 if (this.mode !== val) {
                     this.mode = val;
                     if (val == 1) {
@@ -241,23 +258,47 @@
                 })
             }
         }
-
     }
 </script>
 
 <style scoped>
-	.main-border {
-		background-color: #FFF;
-		padding: 10px 30px;
-		box-shadow: 0 1px 15px -6px rgba(0, 0, 0, .5);
-		border-radius: 5px;
+	.idle-goods-container {
+		background-color: var(--el-bg-color);
+		padding: var(--el-spacing-lg);
+		box-shadow: var(--el-box-shadow-light);
+		border-radius: var(--el-border-radius-base);
 	}
 
-	.block {
+	.idle-header {
+		margin-bottom: var(--el-spacing-lg);
+	}
+
+	.search-box {
+		margin-top: var(--el-spacing-lg);
+		max-width: 400px;
+	}
+
+	.search-input >>> .el-input__inner {
+		border-radius: var(--el-border-radius-base);
+	}
+
+	.idle-table-wrapper {
+		margin-top: var(--el-spacing-lg);
+	}
+
+	.idle-table {
+		width: 100%;
+		margin-bottom: var(--el-spacing-lg);
+	}
+
+	.price {
+		color: var(--el-color-danger);
+		font-weight: 500;
+	}
+
+	.pagination-container {
 		display: flex;
 		justify-content: center;
-		padding-top: 15px;
-		padding-bottom: 10px;
-		width: 100%;
+		padding: var(--el-spacing-lg) 0;
 	}
 </style>

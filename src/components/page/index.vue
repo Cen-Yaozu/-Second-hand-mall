@@ -1,70 +1,69 @@
 <template>
-    <div>
+    <div class="page-wrapper">
         <app-head></app-head>
 <!--        <app-carousel></app-carousel>-->
 
-        <div></div>
         <app-body>
-            <div style="min-height: 85vh;margin-top: 0">
-            <el-tabs v-model="labelName" type="card" @tab-click="handleClick">
-                <el-tab-pane label="全部" name="0"></el-tab-pane>
-                <el-tab-pane label="数码科技" name="1"></el-tab-pane>
-                <el-tab-pane label="生活用品" name="2"></el-tab-pane>
-                <el-tab-pane label="运动相关" name="3"></el-tab-pane>
-                <el-tab-pane label="图书笔记" name="4"></el-tab-pane>
-                <el-tab-pane label="社区帖子" name="5"></el-tab-pane>
+            <div class="home-container">
+                <div class="home-header">
+                    <h1 class="main-title">校易购</h1>
+                    <p class="sub-title">发现校园里的闲置宝藏</p>
+                </div>
+
+                <el-tabs v-model="labelName" class="category-tabs" @tab-click="handleClick">
+                    <el-tab-pane label="全部" name="0"></el-tab-pane>
+                    <el-tab-pane label="数码科技" name="1"></el-tab-pane>
+                    <el-tab-pane label="生活用品" name="2"></el-tab-pane>
+                    <el-tab-pane label="运动相关" name="3"></el-tab-pane>
+                    <el-tab-pane label="图书笔记" name="4"></el-tab-pane>
+                    <el-tab-pane label="社区帖子" name="5"></el-tab-pane>
 <!--                <el-tab-pane label="已被购买商品" name="6"></el-tab-pane>-->
-            </el-tabs>
-            <div style="margin: 0 20px;">
-                <el-row :gutter="30">
-                    <el-col :span="6" v-for="(idle,index) in idleList " :key='idleList'>
-                        <div class="idle-card" @click="toDetails(idle)">
+                </el-tabs>
+
+                <div class="product-grid">
+                    <el-card 
+                        v-for="(idle, index) in idleList" 
+                        :key="index" 
+                        class="product-card" 
+                        shadow="hover"
+                        @click.native="toDetails(idle)">
+                        <div class="product-image">
                             <el-image
-                                    style="width: 100%; height: 160px"
-                                    :src="idle.imgUrl"
-                                    fit="contain">
+                                :src="idle.imgUrl"
+                                fit="cover">
                                 <div slot="error" class="image-slot">
                                     <i class="el-icon-picture-outline">无图</i>
                                 </div>
                             </el-image>
-                            <div class="idle-title">
-                                {{idle.idleName}}
+                            <div v-if="idle.idleStatus === 2" class="product-tag sold">已售出</div>
+                            <div v-else class="product-tag">出售中</div>
+                        </div>
+                        <div class="product-info">
+                            <h3 class="product-title">{{ idle.idleName }}</h3>
+                            <div class="product-meta">
+                                <div class="product-price" v-if="idle.idlePrice !== 0">¥{{ idle.idlePrice }}</div>
+                                <div class="product-price" v-else>免费</div>
+                                <div class="product-location">{{ idle.idlePlace }}</div>
                             </div>
-                            <el-row style="margin: 5px 10px;">
-                                <el-col :span="12">
-                                    <div v-show="idle.idlePrice !== 0" class="idle-prive">￥{{idle.idlePrice}}</div>
-																		<div v-show="idle.idlePrice === 0">&nbsp;&nbsp;</div>
-                                </el-col>
-                                <el-col :span="12">
-                                    <div class="idle-place">{{idle.idlePlace}}</div>
-                                </el-col>
-                            </el-row>
-                            <div class="idle-time">{{idle.timeStr}}</div>
-                            <div class="user-info">
-                                <el-image
-                                        style="width: 30px; height: 30px"
-                                        :src="idle.user.avatar"
-                                        fit="contain">
-                                    <div slot="error" class="image-slot">
-                                        <i class="el-icon-picture-outline">无图</i>
-                                    </div>
-                                </el-image>
-                                <div class="user-nickname">{{idle.user.nickname}}</div>
+                            <div class="product-time">{{ idle.timeStr }}</div>
+                            <div class="product-user">
+                                <el-avatar :size="24" :src="idle.user.avatar"></el-avatar>
+                                <span class="user-name">{{ idle.user.nickname }}</span>
                             </div>
                         </div>
-                    </el-col>
-                </el-row>
-            </div>
-            <div class="fenye">
-                <el-pagination
+                    </el-card>
+                </div>
+
+                <div class="pagination-container">
+                    <el-pagination
                         background
                         @current-change="handleCurrentChange"
                         :current-page.sync="currentPage"
                         :page-size="8"
                         layout="prev, pager, next, jumper"
                         :total="totalItem">
-                </el-pagination>
-            </div>
+                    </el-pagination>
+                </div>
             </div>
             <app-foot></app-foot>
         </app-body>
@@ -91,11 +90,9 @@
                 idleList: [],
                 currentPage: 1,
                 totalItem: 1,
-
             };
         },
         created() {
-
             this.findIdleTiem(1)
         },
         mounted() {
@@ -180,6 +177,129 @@
 </script>
 
 <style scoped>
+    .page-wrapper {
+        min-height: 100vh;
+    }
+
+    .home-container {
+        padding: var(--el-spacing-xl);
+        min-height: 85vh;
+    }
+
+    .home-header {
+        margin-bottom: var(--el-spacing-xl);
+        text-align: center;
+    }
+
+    .main-title {
+        font-size: 32px;
+        color: var(--el-color-primary);
+        margin-bottom: var(--el-spacing-sm);
+    }
+
+    .sub-title {
+        font-size: var(--el-font-size-medium);
+        color: var(--el-text-color-secondary);
+    }
+
+    .category-tabs {
+        margin-bottom: var(--el-spacing-xl);
+    }
+
+    .product-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: var(--el-spacing-lg);
+        margin-bottom: var(--el-spacing-xl);
+    }
+
+    .product-card {
+        height: 100%;
+        cursor: pointer;
+        transition: transform 0.3s;
+    }
+
+    .product-card:hover {
+        transform: translateY(-5px);
+    }
+
+    .product-image {
+        position: relative;
+        height: 200px;
+        overflow: hidden;
+    }
+
+    .product-image .el-image {
+        width: 100%;
+        height: 100%;
+    }
+
+    .product-tag {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background-color: var(--el-color-success);
+        color: white;
+        padding: 2px 8px;
+        border-radius: var(--el-border-radius-small);
+        font-size: var(--el-font-size-extra-small);
+    }
+
+    .product-tag.sold {
+        background-color: var(--el-color-info);
+    }
+
+    .product-info {
+        padding: var(--el-spacing-md);
+    }
+
+    .product-title {
+        font-size: var(--el-font-size-medium);
+        margin-bottom: var(--el-spacing-sm);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .product-meta {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: var(--el-spacing-xs);
+    }
+
+    .product-price {
+        color: var(--el-color-danger);
+        font-weight: 500;
+        font-size: var(--el-font-size-medium);
+    }
+
+    .product-location {
+        color: var(--el-text-color-secondary);
+        font-size: var(--el-font-size-small);
+    }
+
+    .product-time {
+        color: var(--el-text-color-secondary);
+        font-size: var(--el-font-size-extra-small);
+        margin-bottom: var(--el-spacing-sm);
+    }
+
+    .product-user {
+        display: flex;
+        align-items: center;
+    }
+
+    .user-name {
+        margin-left: var(--el-spacing-sm);
+        font-size: var(--el-font-size-small);
+        color: var(--el-text-color-regular);
+    }
+
+    .pagination-container {
+        display: flex;
+        justify-content: center;
+        padding: var(--el-spacing-lg) 0;
+    }
 
     img{
         width: 100%;

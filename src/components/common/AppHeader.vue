@@ -3,31 +3,38 @@
         <div class="header-container">
             <div class="app-name">
                 <router-link to="/">
-                    <img :src="logoPath" style='width: 60px; height: 60px; display: inline-block; vertical-align: middle;
-                                margin-right: 20px'/>
+                    <img :src="logoPath" class="logo-image"/>
+                    <span class="logo-text">校易购</span>
                 </router-link>
-
             </div>
             <div class="search-container">
-                <!-- 按回车触发函数  @keyup.enter.native -->
-                <el-input placeholder="搜闲置..." v-model="searchValue" @keyup.enter.native="searchIdle">
+                <el-input 
+                    placeholder="搜闲置..." 
+                    v-model="searchValue" 
+                    @keyup.enter.native="searchIdle"
+                    class="search-input"
+                    prefix-icon="el-icon-search">
                     <el-button slot="append" icon="el-icon-search" @click="searchIdle"></el-button>
                 </el-input>
             </div>
-            <el-button  type="primary" icon="el-icon-plus"  @click="toRelease">发布闲置/公告</el-button>
-            <el-button type="primary" icon="el-icon-chat-dot-round" @click="toMessage">消息</el-button>
-<!--            <el-button type="primary" icon="el-icon-shopping-cart-1" @click="toShopCart">我的收藏</el-button>-->
-            <router-link v-if="!isLogin" class="user-name-text" to="/login">登录</router-link>
-            <el-dropdown trigger="click" v-else>
-                <div style="cursor:pointer;display: flex;align-items: center; margin-left: 20px">
-                    <div style="font-size: 16px;color: #409EFF;padding-right: 5px;">{{nickname}}</div>
-                    <el-avatar :src="avatar"></el-avatar>
-                </div>
-                <el-dropdown-menu slot="dropdown">
-                    <el-dropdown-item><div @click="toMe">个人中心</div></el-dropdown-item>
-                    <el-dropdown-item divided style="color: red;"><div @click="loginOut">退出登录</div></el-dropdown-item>
-                </el-dropdown-menu>
-            </el-dropdown>
+            <div class="action-buttons">
+                <el-button type="primary" icon="el-icon-plus" @click="toRelease">发布闲置/公告</el-button>
+                <el-button type="primary" icon="el-icon-chat-dot-round" @click="toMessage">
+                    消息
+                    <el-badge v-if="unreadMessagesCount > 0" :value="unreadMessagesCount" class="message-badge"></el-badge>
+                </el-button>
+                <router-link v-if="!isLogin" class="user-name-text" to="/login">登录</router-link>
+                <el-dropdown trigger="click" v-else>
+                    <div class="user-profile">
+                        <div class="user-nickname">{{nickname}}</div>
+                        <el-avatar :src="avatar" :size="32"></el-avatar>
+                    </div>
+                    <el-dropdown-menu slot="dropdown">
+                        <el-dropdown-item><div @click="toMe">个人中心</div></el-dropdown-item>
+                        <el-dropdown-item divided class="logout-item"><div @click="loginOut">退出登录</div></el-dropdown-item>
+                    </el-dropdown-menu>
+                </el-dropdown>
+            </div>
         </div>
     </div>
 </template>
@@ -92,11 +99,6 @@
                     this.$router.push({path: '/release'});
                 }
             },
-            // toShopCart(){
-            //     if ('/shopCart' !== this.$route.path) {
-            //         this.$router.push({path: '/shopCart'});
-            //     }
-            // },
             /*这里的logout 只是用前端来删除掉浏览器中之前登录过的用户信息，并没有发送请求*/
             loginOut(){
                 this.$api.logout().then(res=>{
@@ -125,55 +127,89 @@
         right: 0;
         width: 100%;
         height: 60px;
-        background: #BCDDDB;
+        background-color: var(--el-bg-color);
+        box-shadow: var(--el-box-shadow-light);
         display: flex;
         justify-content: center;
-        border-bottom: #eeeeee solid ;
         z-index: 1000;
         margin: 0;
+        border-bottom: 1px solid var(--el-border-color-lighter);
     }
 
     .header-container {
-        width: auto;
+        width: 100%;
+        max-width: 1200px;
         height: 100%;
         display: flex;
         align-items: center;
         justify-content: space-between;
+        padding: 0 var(--el-spacing-lg);
         margin: 0;
     }
 
     .app-name a {
-        color: #409EFF;
-        font-size: 24px;
+        display: flex;
+        align-items: center;
+        color: var(--el-color-primary);
+        font-size: var(--el-font-size-large);
         text-decoration: none;
+        font-weight: 600;
+    }
+
+    .logo-image {
+        width: 40px; 
+        height: 40px; 
+        display: inline-block; 
+        vertical-align: middle;
+        margin-right: var(--el-spacing-md);
+    }
+
+    .logo-text {
+        font-size: var(--el-font-size-extra-large);
     }
 
     .search-container {
-        width: 700px;
-    }
-    .user-name-text{
-        font-size: 20px;
-        font-weight: 600;
-        color: #409EFF;
-        cursor: pointer;
-        text-decoration: none;
-        left: 20px;
-        position: relative;
-    }
-    .message-badge {
-        position: relative;
-        top: -5px; /* 调整红点相对于按钮的位置 */
-        left: 5px; /* 调整红点的水平位置 */
-        display: inline-block;
-        width: 20px;
-        height: 20px;
-        border-radius: 50%;
-        background-color: red;
-        color: white;
-        text-align: center;
-        line-height: 20px; /* 使数字垂直居中 */
-        font-size: 9px;
-        font-weight: bold;
+        flex: 1;
+        max-width: 500px;
+        margin: 0 var(--el-spacing-xl);
     }
 
+    .search-input >>> .el-input__inner {
+        border-radius: var(--el-border-radius-round);
+    }
+
+    .action-buttons {
+        display: flex;
+        align-items: center;
+        gap: var(--el-spacing-md);
+    }
+
+    .user-name-text {
+        font-size: var(--el-font-size-medium);
+        font-weight: 500;
+        color: var(--el-color-primary);
+        cursor: pointer;
+        text-decoration: none;
+        margin-left: var(--el-spacing-md);
+    }
+
+    .user-profile {
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+    }
+
+    .user-nickname {
+        font-size: var(--el-font-size-base);
+        color: var(--el-color-primary);
+        margin-right: var(--el-spacing-sm);
+    }
+
+    .message-badge {
+        margin-top: -10px;
+    }
+
+    .logout-item {
+        color: var(--el-color-danger);
+    }
 </style>

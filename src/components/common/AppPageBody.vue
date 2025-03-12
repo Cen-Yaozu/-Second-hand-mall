@@ -1,6 +1,6 @@
 <template>
-    <div class="main-container">
-        <div class="main-content">
+    <div class="page-body">
+        <div class="page-content">
             <slot></slot>
         </div>
     </div>
@@ -8,20 +8,27 @@
 
 <script>
     export default {
-        name: "PageBody",
+        name: "AppPageBody",
     }
 </script>
 
 <style scoped>
-    .main-container{
-        margin-top: 90px;
+    .page-body {
+        margin-top: 60px;
+        min-height: calc(100vh - 60px);
+        background-color: var(--el-bg-color-page);
         display: flex;
-        justify-content: center;
-        background-color: #BCDDDB;
+        flex-direction: column;
+        align-items: center;
     }
-    .main-content{
-        width: 70%;
-        background-color: #BCDDDB;
-        min-height: 90vh;
+    
+    .page-content {
+        width: 100%;
+        max-width: 1200px;
+        flex: 1;
+        background-color: var(--el-bg-color);
+        box-shadow: var(--el-box-shadow-light);
+        border-radius: var(--el-border-radius-base);
+        overflow: hidden;
     }
 </style>
