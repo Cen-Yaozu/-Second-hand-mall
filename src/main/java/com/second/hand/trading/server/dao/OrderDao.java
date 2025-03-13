@@ -8,15 +8,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 @Mapper
-public interface OrderDao  extends BaseMapper<OrderModel> {
-    int deleteByPrimaryKey(Long id);
-
-    int insert(OrderModel orderModel);
-
-    int insertSelective(OrderModel record);
-
-    OrderModel selectByPrimaryKey(Long id);
-
+public interface OrderDao extends BaseMapper<OrderModel> {
+    // 自定义业务方法
     List<OrderModel> getMyOrder(Long userId);
 
     List<OrderModel> getAllOrder(int begin, int nums);
@@ -25,13 +18,5 @@ public interface OrderDao  extends BaseMapper<OrderModel> {
 
     int countAllOrder();
 
-
     List<OrderModel> findOrderByIdleIdList(List<Long> idleIdList);
-
-    @Transactional
-    int updateByPrimaryKeySelective(OrderModel record);
-
-    int updateByPrimaryKey(OrderModel record);
-
-
 }

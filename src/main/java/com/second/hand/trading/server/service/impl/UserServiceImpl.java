@@ -2,6 +2,11 @@ package com.second.hand.trading.server.service.impl;
 
 import cn.hutool.core.util.RandomUtil;
 import cn.hutool.crypto.SecureUtil;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.second.hand.trading.server.dao.UserDao;
 import com.second.hand.trading.server.enums.ErrorMsg;
 import com.second.hand.trading.server.model.UserModel;
@@ -28,7 +33,7 @@ public class UserServiceImpl implements UserService {
      * @return
      */
     public UserModel getUser(Long id){
-        return userDao.selectByPrimaryKey(id);
+        return userDao.selectById(id);
     }
 
     /**
@@ -38,7 +43,11 @@ public class UserServiceImpl implements UserService {
      * @return
      */
     public UserModel userLogin(String accountNumber, String userPassword){
-        return userDao.userLogin(accountNumber,userPassword);
+        // 使用MyBatis-Plus的条件构造器
+        QueryWrapper<UserModel> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("account_number", accountNumber)
+                   .eq("user_password", userPassword);
+        return userDao.selectOne(queryWrapper);
     }
 
     /**
@@ -88,7 +97,7 @@ public class UserServiceImpl implements UserService {
      * @return
      */
     public boolean updateUserInfo(UserModel userModel){
-        return userDao.updateByPrimaryKeySelective(userModel)==1;
+        return userDao.updateById(userModel) == 1;
     }
 
     /**
@@ -98,26 +107,39 @@ public class UserServiceImpl implements UserService {
      * @param id
      * @return
      */
-    public boolean updatePassword(String newPassword, String oldPassword,Long id){
-        return userDao.updatePassword(newPassword,oldPassword,id)==1;
+    public boolean updatePassword(String newPassword, String oldPassword, Long id){
+        // 使用MyBatis-Plus的条件构造器
+        LambdaUpdateWrapper<UserModel> updateWrapper = new LambdaUpdateWrapper<>();
+        updateWrapper.eq(UserModel::getId, id)
+                    .eq(UserModel::getUserPassword, oldPassword)
+                    .set(UserModel::getUserPassword, newPassword);
+        
+        return userDao.update(null, updateWrapper) == 1;
     }
 
-    public PageVo<UserModel> getUserByStatus(int status,int page ,int nums){
-        List<UserModel> list;
-        int count=0;
-        if(status==0){
-            count=userDao.countNormalUser();
-            list=userDao.getNormalUser((page-1)*nums, nums);
-            list.stream().forEach(user -> {
-                        if (user.getUserSalt() != null && !user.getUserSalt().isEmpty()){
-                            user.setUserPassword("密码已加密，可直接修改");
-                        }
-            });
-        }else {
-            count=userDao.countBanUser();
-            list=userDao.getBanUser((page-1)*nums, nums);
+    public PageVo<UserModel> getUserByStatus(int status, int page, int nums){
+        // 使用MyBatis-Plus的分页查询
+        IPage<UserModel> pageParam = new Page<>(page, nums);
+        QueryWrapper<UserModel> queryWrapper = new QueryWrapper<>();
+        
+        if(status == 0){
+            queryWrapper.isNull("user_status").or().eq("user_status", 0);
+        } else {
+            queryWrapper.eq("user_status", 1);
         }
-        return new PageVo<>(list,count);
+        
+        IPage<UserModel> result = userDao.selectPage(pageParam, queryWrapper);
+        
+        // 处理密码字段
+        if(status == 0){
+            result.getRecords().forEach(user -> {
+                if (user.getUserSalt() != null && !user.getUserSalt().isEmpty()){
+                    user.setUserPassword("密码已加密，可直接修改");
+                }
+            });
+        }
+        
+        return new PageVo<>(result.getRecords(), (int)result.getTotal());
     }
 
 
@@ -125,34 +147,40 @@ public class UserServiceImpl implements UserService {
      * 通过用户的姓名查询用户的id
      *
      * */
-	@Override
-	public Long getUserId(String nickname) {
-		return userDao.selectByUserName(nickname);
-	}
+    @Override
+    public Long getUserId(String nickname) {
+        QueryWrapper<UserModel> queryWrapper = new QueryWrapper<>();
+        queryWrapper.select("id").eq("nickname", nickname);
+        UserModel userModel = userDao.selectOne(queryWrapper);
+        return userModel != null ? userModel.getId() : null;
+    }
 
     @Override
-    public UserModel getUserByaccountNumber(String accontNumber) {
-        return userDao.selectByAccountNumber(accontNumber);
+    public UserModel getUserByaccountNumber(String accountNumber) {
+        QueryWrapper<UserModel> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("account_number", accountNumber);
+        return userDao.selectOne(queryWrapper);
     }
 
 
-	/**
+    /**
      * 通过用户账号查询用户信息
      *
      * @return*/
     @Override
     public PageVo<UserModel> getUserByNumber(String searchValue, int mode) {
-        List<UserModel> list;
-
-//        System.out.println("-------------------" + 123 + "-----------------------");
-        list=userDao.getUserByNumber(searchValue, mode-1);
-//
-//        System.out.println("-------------------" + 456 + "-----------------------");
-//        for (UserModel i: list) {
-//            System.out.println(i.getNickname() + " " + i.getUserStatus());
-//        }
-//        System.out.println("-------------------" + 789 + "-----------------------");
-        return new PageVo<>(list, 1);
+        QueryWrapper<UserModel> queryWrapper = new QueryWrapper<>();
+        
+        if(mode == 0) { // 假设mode-1=0表示正常用户
+            queryWrapper.like("account_number", searchValue)
+                      .and(wrapper -> wrapper.isNull("user_status").or().eq("user_status", 0));
+        } else { // 假设mode-1=1表示禁用用户
+            queryWrapper.like("account_number", searchValue)
+                      .eq("user_status", 1);
+        }
+        
+        List<UserModel> list = userDao.selectList(queryWrapper);
+        return new PageVo<>(list, list.size());
     }
 
     @Override
@@ -164,11 +192,13 @@ public class UserServiceImpl implements UserService {
         }
 
         // 获取数据库中的用户密码信息
-        UserModel userModel = userDao.selectByAccountNumber(accountNumber);
+        QueryWrapper<UserModel> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("account_number", accountNumber);
+        UserModel userModel = userDao.selectOne(queryWrapper);
+        
         if (userModel == null){
             return ResultVo.fail(ErrorMsg.EMAIL_LOGIN_ERROR);
         }
-
 
         String userPassword1 = userModel.getUserPassword();
         String userSalt = userModel.getUserSalt();
@@ -181,10 +211,9 @@ public class UserServiceImpl implements UserService {
             return ResultVo.fail(ErrorMsg.EMAIL_LOGIN_ERROR);
         }
 
-        if(userModel.getUserStatus()!=null&&userModel.getUserStatus().equals((byte) 1)){
+        if(userModel.getUserStatus()!=null && userModel.getUserStatus().equals((byte) 1)){
             return ResultVo.fail(ErrorMsg.ACCOUNT_Ban);
         }
         return ResultVo.success(userModel);
     }
-
 }

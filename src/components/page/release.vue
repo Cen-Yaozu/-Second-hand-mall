@@ -55,7 +55,7 @@
                     <div class="release-idle-container-picture">
                         <div class="release-idle-container-picture-title">上传闲置照片</div>
                         <el-upload
-                                action="http://localhost:8080/file/"
+                                action="http://localhost:8082/file"
                                 :on-preview="fileHandlePreview"
                                 :on-remove="fileHandleRemove"
                                 :on-success="fileHandleSuccess"
@@ -161,7 +161,9 @@
             },
             fileHandleSuccess(response, file, fileList){
                 console.log("file:",response,file,fileList);
-                this.imgList.push(response.data);
+                const fileData = response.data;
+                this.imgList.push(fileData.localPath);
+                file.url = fileData.accessUrl;
             },
             releaseButton(){
                 this.idleItemInfo.pictureList=JSON.stringify(this.imgList);

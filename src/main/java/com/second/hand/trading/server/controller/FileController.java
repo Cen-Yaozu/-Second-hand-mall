@@ -36,13 +36,42 @@ public class FileController {
         String fileName= uuid+ multipartFile.getOriginalFilename();
         try {
             if (fileService.uploadFile(multipartFile,fileName)) {
-                return ResultVo.success(baseUrl+"/image?imageName="+fileName);
+                File fileDir = new File(userFilePath);
+                String localPath = fileDir.getAbsolutePath() + "/" + fileName;
+                String accessUrl = baseUrl + "/image?imageName=" + fileName;
+                return ResultVo.success(new FilePathResponse(localPath, accessUrl));
             }
         } catch (IOException e) {
             System.out.println(e.getMessage());
             return ResultVo.fail(ErrorMsg.SYSTEM_ERROR);
         }
         return ResultVo.fail(ErrorMsg.FILE_UPLOAD_ERROR);
+    }
+
+    static class FilePathResponse {
+        private String localPath;
+        private String accessUrl;
+
+        public FilePathResponse(String localPath, String accessUrl) {
+            this.localPath = localPath;
+            this.accessUrl = accessUrl;
+        }
+
+        public String getLocalPath() {
+            return localPath;
+        }
+
+        public void setLocalPath(String localPath) {
+            this.localPath = localPath;
+        }
+
+        public String getAccessUrl() {
+            return accessUrl;
+        }
+
+        public void setAccessUrl(String accessUrl) {
+            this.accessUrl = accessUrl;
+        }
     }
 
     @GetMapping("/image")

@@ -24,55 +24,49 @@
     where id = #{id,jdbcType=BIGINT}
   </select>
   <select id="getAllIdleItem" parameterType="java.lang.Long" resultMap="BaseResultMap">
-    select
-    <include refid="Base_Column_List" />
+    select id, idle_name, idle_details, picture_list, idle_price, idle_place, idle_label, release_time, idle_status, user_id
     from sh_idle_item
     where user_id = #{userId,jdbcType=BIGINT} and idle_status!=0 order by id desc
   </select>
-  <select id="countIdleItem"  resultType="int">
+  <select id="countIdleItem" resultType="int">
     select COUNT(*) from sh_idle_item
     where (idle_name LIKE "%"#{idleName}"%" or idle_details LIKE "%"#{idleDetails}"%") and idle_status = 1
   </select>
-  <select id="countIdleItemByLable"  resultType="int">
+  <select id="countIdleItemByLable" resultType="int">
     select COUNT(*) from sh_idle_item
     where idle_label = #{idleLabel} and idle_status = 1
   </select>
-  <select id="countIdleItemByStatus"  resultType="int">
+  <select id="countIdleItemByStatus" resultType="int">
     select COUNT(*) from sh_idle_item
     where idle_status = #{status}
   </select>
   <select id="findIdleItem" resultMap="BaseResultMap">
-    select
-    <include refid="Base_Column_List" />
+    select id, idle_name, idle_details, picture_list, idle_price, idle_place, idle_label, release_time, idle_status, user_id
     from sh_idle_item
     where (idle_name LIKE "%"#{findValue}"%" or idle_details LIKE "%"#{findValue}"%") and idle_status = 1 order by id desc limit #{begin}, #{nums}
   </select>
   <select id="findIdleItem1" resultMap="BaseResultMap">
-    select
-    <include refid="Base_Column_List" />
+    select id, idle_name, idle_details, picture_list, idle_price, idle_place, idle_label, release_time, idle_status, user_id
     from sh_idle_item
     where (idle_name LIKE "%"#{findValue}"%" or idle_details LIKE "%"#{findValue}"%") and idle_status = 2 order by id desc limit #{begin}, #{nums}
   </select>
   <select id="findIdleItemByLable" resultMap="BaseResultMap">
-    select
-    <include refid="Base_Column_List" />
+    select id, idle_name, idle_details, picture_list, idle_price, idle_place, idle_label, release_time, idle_status, user_id
     from sh_idle_item
-    where idle_label = #{idleLabel}  and idle_status = 1 order by id desc limit #{begin}, #{nums}
+    where idle_label = #{idleLabel} and idle_status = 1 order by id desc limit #{begin}, #{nums}
   </select>
   <select id="getIdleItemByStatus" resultMap="BaseResultMap">
-    select
-    <include refid="Base_Column_List" />
+    select id, idle_name, idle_details, picture_list, idle_price, idle_place, idle_label, release_time, idle_status, user_id
     from sh_idle_item
     where idle_status = #{status} order by id desc limit #{begin}, #{nums}
   </select>
   <select id="findIdleByList" resultMap="BaseResultMap">
-    select
-    <include refid="Base_Column_List" />
-    from sh_idle_item where id in
-    <foreach collection="idList" index="index" item="id" open="(" separator="," close=")">
+    select id, idle_name, idle_details, picture_list, idle_price, idle_place, idle_label, release_time, idle_status, user_id
+    from sh_idle_item 
+    where id in
+    <foreach collection="idleIdList" index="index" item="id" open="(" separator="," close=")">
       #{id}
     </foreach>
-    order by id desc
   </select>
   <delete id="deleteByPrimaryKey" parameterType="java.lang.Long">
     delete from sh_idle_item
@@ -150,10 +144,10 @@
     </trim>
   </insert>
   <update id="updateStatusByIds">
-    update sh_idle_item SET idle_status = 2
-    where id in
-    <foreach collection = 'list' item = 'item' index='index' open = '(' separator= ',' close = ')' >
-      #{item}
+    update sh_idle_item set idle_status = 2
+    where id in 
+    <foreach collection="idleItemIds" index="index" item="id" open="(" separator="," close=")">
+      #{id}
     </foreach>
   </update>
   <update id="updateByPrimaryKeySelective" parameterType="com.second.hand.trading.server.model.IdleItemModel">

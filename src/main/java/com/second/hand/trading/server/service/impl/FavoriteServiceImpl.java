@@ -44,7 +44,7 @@ public class FavoriteServiceImpl extends ServiceImpl<FavoriteDao, FavoriteModel>
      * @return
      */
     public boolean deleteFavorite(Long id){
-        return favoriteDao.deleteByPrimaryKey(id)==1;
+        return favoriteDao.deleteById(id)==1;
     }
 
     /**
@@ -71,7 +71,7 @@ public class FavoriteServiceImpl extends ServiceImpl<FavoriteDao, FavoriteModel>
             for(FavoriteModel i:list){
                 idleIdList.add(i.getIdleId());
             }
-            List<IdleItemModel> idleItemModelList=idleItemDao.findIdleByList(idleIdList);
+            List<IdleItemModel> idleItemModelList = idleItemDao.selectBatchIds(idleIdList);
             Map<Long,IdleItemModel> map=new HashMap<>();
             for(IdleItemModel idle:idleItemModelList){
                 map.put(idle.getId(),idle);

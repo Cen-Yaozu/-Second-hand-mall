@@ -1,5 +1,7 @@
 package com.second.hand.trading.server.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.second.hand.trading.server.dao.AddressDao;
 import com.second.hand.trading.server.model.AddressModel;
@@ -22,7 +24,9 @@ public class AddressServiceImpl extends ServiceImpl<AddressDao, AddressModel> im
      * @return
      */
     public List<AddressModel> getAddressByUser(Long userId){
-        return addressDao.getAddressByUser(userId);
+        LambdaQueryWrapper<AddressModel> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(AddressModel::getUserId, userId);
+        return list(queryWrapper);
     }
 
     /**
@@ -32,12 +36,11 @@ public class AddressServiceImpl extends ServiceImpl<AddressDao, AddressModel> im
      * @param userId
      * @return
      */
-    public AddressModel getAddressById(Long id,Long userId){
-        AddressModel addressModel=addressDao.selectByPrimaryKey(id);
-        if(userId.equals(addressModel.getUserId())){
-            return addressModel;
-        }
-        return null;
+    public AddressModel getAddressById(Long id, Long userId){
+        LambdaQueryWrapper<AddressModel> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(AddressModel::getId, id)
+                   .eq(AddressModel::getUserId, userId);
+        return getOne(queryWrapper);
     }
 
     /**
@@ -45,53 +48,62 @@ public class AddressServiceImpl extends ServiceImpl<AddressDao, AddressModel> im
      * @param addressModel
      * @return
      */
-    //取消使用事务，不存在并发修改一个用户的地址信息
     public boolean addAddress(AddressModel addressModel){
         if(addressModel.getDefaultFlag()){
-            AddressModel a=new AddressModel();
-            a.setDefaultFlag(false);
-            a.setUserId(addressModel.getUserId());
-            //将一个用户的所有地址改为非默认地址，需要优化，sql增加判断条件default_flag=1，减少更新记录的数目
-            addressDao.updateByUserIdSelective(a);
-        }else {
-            //判断是否有默认地址，若无，则将当前地址设为默认地址
-            List<AddressModel> list=addressDao.getDefaultAddress(addressModel.getUserId());
-            //可优化，改为count统计，不用返回地址数据，减少io
-            if(null==list||0==list.size()){
+            // 使用MyBatis-Plus的条件构造器更新用户的所有地址为非默认地址
+            LambdaUpdateWrapper<AddressModel> updateWrapper = new LambdaUpdateWrapper<>();
+            updateWrapper.eq(AddressModel::getUserId, addressModel.getUserId())
+                        .set(AddressModel::getDefaultFlag, false);
+            update(updateWrapper);
+        } else {
+            // 判断是否有默认地址，若无，则将当前地址设为默认地址
+            LambdaQueryWrapper<AddressModel> queryWrapper = new LambdaQueryWrapper<>();
+            queryWrapper.eq(AddressModel::getUserId, addressModel.getUserId())
+                       .eq(AddressModel::getDefaultFlag, true);
+            // 使用count代替list查询，减少IO负担
+            long count = count(queryWrapper);
+            if(count == 0){
                 addressModel.setDefaultFlag(true);
             }
         }
-        return addressDao.insert(addressModel)==1;
+        return save(addressModel);
     }
 
     /**
-     * 更新地址信息，同时要验证用户身份（未验证）
-     *
+     * 更新地址信息，同时要验证用户身份
      * @param addressModel
      * @return
      */
-    //取消使用事务，不存在并发修改一个用户的地址信息
     public boolean updateAddress(AddressModel addressModel){
         if(addressModel.getDefaultFlag()){
-            //同新增地址时的逻辑
-            AddressModel a=new AddressModel();
-            a.setDefaultFlag(false);
-            a.setUserId(addressModel.getUserId());
-            addressDao.updateByUserIdSelective(a);
-        }else{
-            //若取消默认地址，则将第一个地址设置为默认地址
-            List<AddressModel> list=addressDao.getAddressByUser(addressModel.getUserId());
-            for(AddressModel a:list){
-                if(a.getDefaultFlag()&& a.getId().equals(addressModel.getId())){
-                    AddressModel a1=new AddressModel();
-                    a1.setId(list.get(0).getId());
-                    a1.setDefaultFlag(true);
-                    return addressDao.updateByPrimaryKeySelective(addressModel)==1&&
-                            addressDao.updateByPrimaryKeySelective(a1)==1;
+            // 先将该用户的所有地址设为非默认
+            LambdaUpdateWrapper<AddressModel> updateWrapper = new LambdaUpdateWrapper<>();
+            updateWrapper.eq(AddressModel::getUserId, addressModel.getUserId())
+                        .set(AddressModel::getDefaultFlag, false);
+            update(updateWrapper);
+        } else {
+            // 若取消默认地址，则检查是否为原默认地址，如果是则将第一个地址设置为默认地址
+            LambdaQueryWrapper<AddressModel> queryWrapper = new LambdaQueryWrapper<>();
+            queryWrapper.eq(AddressModel::getUserId, addressModel.getUserId())
+                       .eq(AddressModel::getDefaultFlag, true);
+            AddressModel defaultAddress = getOne(queryWrapper);
+            
+            if(defaultAddress != null && defaultAddress.getId().equals(addressModel.getId())){
+                // 查找除了当前地址外的第一个地址
+                LambdaQueryWrapper<AddressModel> otherQuery = new LambdaQueryWrapper<>();
+                otherQuery.eq(AddressModel::getUserId, addressModel.getUserId())
+                         .ne(AddressModel::getId, addressModel.getId())
+                         .orderByAsc(AddressModel::getId)
+                         .last("LIMIT 1");
+                AddressModel firstAddress = getOne(otherQuery);
+                
+                if(firstAddress != null){
+                    firstAddress.setDefaultFlag(true);
+                    updateById(firstAddress);
                 }
             }
         }
-        return addressDao.updateByPrimaryKeySelective(addressModel)==1;
+        return updateById(addressModel);
     }
 
     /**
@@ -100,8 +112,9 @@ public class AddressServiceImpl extends ServiceImpl<AddressDao, AddressModel> im
      * @return
      */
     public boolean deleteAddress(AddressModel addressModel){
-        return addressDao.deleteByPrimaryKeyAndUser(addressModel.getId(),addressModel.getUserId())==1;
+        LambdaQueryWrapper<AddressModel> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(AddressModel::getId, addressModel.getId())
+                   .eq(AddressModel::getUserId, addressModel.getUserId());
+        return remove(queryWrapper);
     }
-
-
 }

@@ -1,5 +1,9 @@
 package com.second.hand.trading.server.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -26,7 +30,7 @@ import java.util.*;
 import java.util.concurrent.locks.ReentrantLock;
 
 @Service
-public class OrderServiceImpl  extends ServiceImpl<OrderDao, OrderModel> implements OrderService {
+public class OrderServiceImpl extends ServiceImpl<OrderDao, OrderModel> implements OrderService {
 
     @Resource
     private OrderDao orderDao;
@@ -49,284 +53,331 @@ public class OrderServiceImpl  extends ServiceImpl<OrderDao, OrderModel> impleme
      * @param orderModel
      * @return
      */
-
-
-    /**
-     * 定义一个静态代码块，用于初始化锁映射表。
-     * 锁映射表使用HashMap来存储，其中键为整数，值为ReentrantLock类型。
-     * 这个映射表在类加载时被初始化，为0到99的每个整数分配一个公平的ReentrantLock。
-     * 公平锁意味着获取锁的线程将按照它们到达的顺序被调度。
-     */
     private static HashMap<Integer,ReentrantLock> lockMap=new HashMap<>();
+    
     static {
-        // 初始化lockMap，为每一个可能的线程分配一个公平的锁
-//        ReentrantLock lock=new ReentrantLock(true);
-        for(int i=0;i<100;i++){
-            lockMap.put(i,new ReentrantLock(true));
+        for(int i=0;i<10;i++){
+            lockMap.put(i,new ReentrantLock());
         }
     }
+
+    @Override
     public boolean addOrder(OrderModel orderModel){
-        IdleItemModel idleItemModel=idleItemDao.selectByPrimaryKey(orderModel.getIdleId());
-        System.out.println(idleItemModel.getIdleStatus());
-        if(idleItemModel.getIdleStatus()!=1){
+        // 查询闲置物品
+        IdleItemModel idleItemModel = idleItemDao.selectById(orderModel.getIdleId());
+        if(idleItemModel == null) {
             return false;
         }
-        IdleItemModel idleItem=new IdleItemModel();
-        idleItem.setId(orderModel.getIdleId());
-        idleItem.setUserId(idleItemModel.getUserId());
-        idleItem.setIdleStatus((byte)2);
-
-
-        /*
-         * 使用订单锁来保证订单操作的线程安全。
-         *
-         * @param idleItem 闲置物品信息
-         * @param orderModel 订单模型
-         * @return boolean 添加订单是否成功的标志
-         */
-        int key= (int) (orderModel.getIdleId()%100); // 根据订单ID计算锁的索引
-        ReentrantLock lock=lockMap.get(key); // 从锁映射中获取对应的锁
-        boolean flag;
+        
+        // 加锁处理
+        int lockId = idleItemModel.getId().intValue() % 10;
+        ReentrantLock lock = lockMap.get(lockId);
+        lock.lock();
+        
         try {
-            lock.lock(); // 获取锁
-            flag=addOrderHelp(idleItem,orderModel); // 尝试添加订单
-        }finally {
-            lock.unlock(); // 释放锁
+            return addOrderHelp(idleItemModel, orderModel);
+        } finally {
+            lock.unlock();
         }
-        return flag; // 返回添加订单的结果
-
     }
-
-
-
-    /**
-     * 添加订单辅助方法
-     * @param idleItem 闲置物品模型，包含闲置物品的相关信息
-     * @param orderModel 订单模型，包含订单的相关信息
-     * @return boolean 返回true表示订单添加成功，返回false表示订单添加失败
-     */
+    
     @Transactional(rollbackFor = Exception.class)
     public boolean addOrderHelp(IdleItemModel idleItem, OrderModel orderModel){
-        // 根据闲置物品ID查询闲置物品信息
-        IdleItemModel idleItemModel = idleItemDao.selectByPrimaryKey(orderModel.getIdleId());
-        // 检查闲置物品状态是否为可用（1）
-        if (idleItemModel.getIdleStatus() != 1) {
+        // 检查商品状态
+        if(idleItem.getIdleStatus() != 0) {
             return false;
         }
-        // 更新闲置物品状态为已售出
-        if (idleItemDao.updateByPrimaryKeySelective(idleItem) == 1) {
-            // 插入新订单
-            if (orderDao.insert(orderModel) == 1) {
-                // 设置订单状态为待支付（4）
-                orderModel.setOrderStatus((byte) 4);
-                // 添加订单任务，如果订单在半小时内未支付则取消订单
-                OrderTaskHandler.addOrder(new OrderTask(orderModel, 30 * 60));
-                return true;
-            } else {
-                // 如果订单插入失败，抛出运行时异常
-                new RuntimeException();
-            }
+        
+        // 更新商品状态为已下架
+        LambdaUpdateWrapper<IdleItemModel> updateWrapper = new LambdaUpdateWrapper<>();
+        updateWrapper.eq(IdleItemModel::getId, idleItem.getId())
+                    .eq(IdleItemModel::getIdleStatus, 0) // 确保状态为上架中
+                    .set(IdleItemModel::getIdleStatus, 1); // 设置为已下架
+        
+        boolean updated = idleItemDao.update(null, updateWrapper) > 0;
+        if(!updated) {
+            return false;
         }
-        return false;
+        
+        // 设置订单的闲置物品信息
+        orderModel.setOrderPrice(idleItem.getIdlePrice());
+        
+        // 创建30分钟后自动取消的任务
+        OrderTask task = new OrderTask(orderModel, 30 * 60);
+        OrderTaskHandler.addOrder(task);
+        
+        // 保存订单
+        return save(orderModel);
     }
 
-
-    /**
-     * 获取订单信息，同时获取对应的闲置信息
-     * @param id
-     * @return
-     */
+    @Override
     public OrderModel getOrder(Long id){
-        OrderModel orderModel=orderDao.selectByPrimaryKey(id);
-        orderModel.setIdleItem(idleItemDao.selectByPrimaryKey(orderModel.getIdleId()));
+        OrderModel orderModel = getById(id);
+        if (orderModel != null && orderModel.getIdleId() != null) {
+            orderModel.setIdleItem(idleItemDao.selectById(orderModel.getIdleId()));
+        }
         return orderModel;
     }
 
-    /**
-     *   根据订单号，查询订单
-     *
-     *
-     * @return*/
     @Override
     public PageVo<OrderModel> findOrderByNumber(String searchValue, int page, int nums) {
-        List<OrderModel> list=orderDao.getOrderByNumber(searchValue,(page-1)*nums,nums);
-
-        if(list.size()>0){
-            List<Long> idleIdList=new ArrayList<>();
-            for(OrderModel i:list){
-                idleIdList.add(i.getIdleId());
+        // 构建分页对象
+        IPage<OrderModel> pageParam = new Page<>(page, nums);
+        
+        // 构建查询条件
+        LambdaQueryWrapper<OrderModel> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.like(OrderModel::getOrderNumber, searchValue)
+                   .orderByDesc(OrderModel::getCreateTime);
+        
+        // 执行分页查询
+        IPage<OrderModel> result = page(pageParam, queryWrapper);
+        
+        // 查询关联的闲置物品
+        List<OrderModel> orders = result.getRecords();
+        if (!orders.isEmpty()) {
+            List<Long> idleIds = new ArrayList<>();
+            for (OrderModel order : orders) {
+                if (order.getIdleId() != null) {
+                    idleIds.add(order.getIdleId());
+                }
             }
-            List<IdleItemModel> idleItemModelList=idleItemDao.findIdleByList(idleIdList);
-            Map<Long,IdleItemModel> map=new HashMap<>();
-            for(IdleItemModel idle:idleItemModelList){
-                map.put(idle.getId(),idle);
-            }
-            for(OrderModel i:list){
-                i.setIdleItem(map.get(i.getIdleId()));
+            
+            if (!idleIds.isEmpty()) {
+                LambdaQueryWrapper<IdleItemModel> idleQueryWrapper = new LambdaQueryWrapper<>();
+                idleQueryWrapper.in(IdleItemModel::getId, idleIds);
+                List<IdleItemModel> idleItems = idleItemDao.selectList(idleQueryWrapper);
+                
+                Map<Long, IdleItemModel> idleMap = new HashMap<>();
+                for (IdleItemModel idle : idleItems) {
+                    idleMap.put(idle.getId(), idle);
+                }
+                
+                for (OrderModel order : orders) {
+                    if (order.getIdleId() != null) {
+                        order.setIdleItem(idleMap.get(order.getIdleId()));
+                    }
+                }
             }
         }
-
-        return new PageVo<OrderModel>(list,1);
+        
+        // 返回结果
+        return new PageVo<>(orders, (int)result.getTotal());
     }
 
-    /**
-     * 更新订单状态，无验证，后期修改为定制的更新sql
-     * 后期改为在支付时下架闲置
-     * @param orderModel
-     * @return
-     */
+    @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean updateOrder(OrderModel orderModel){
-        //不可修改的信息
+        // 获取原订单信息
+        OrderModel oldOrder = getById(orderModel.getId());
+        if(oldOrder == null) {
+            return false;
+        }
+        
+        // 检查订单状态变化
+        if(orderModel.getOrderStatus() != null && 
+           oldOrder.getOrderStatus() != orderModel.getOrderStatus()) {
+            
+            // 处理取消订单的情况
+            if(orderModel.getOrderStatus() == 2) { // 假设2表示取消订单
+                // 重新上架闲置物品
+                if(oldOrder.getIdleId() != null) {
+                    LambdaUpdateWrapper<IdleItemModel> updateWrapper = new LambdaUpdateWrapper<>();
+                    updateWrapper.eq(IdleItemModel::getId, oldOrder.getIdleId())
+                                .set(IdleItemModel::getIdleStatus, 0); // 重新上架
+                    idleItemDao.update(null, updateWrapper);
+                }
+            }
+        }
+        
+        // 不更新的字段置为null
         orderModel.setOrderNumber(null);
         orderModel.setUserId(null);
         orderModel.setIdleId(null);
         orderModel.setCreateTime(null);
-        if(orderModel.getOrderStatus()==4){
-            //取消订单,需要优化，减少数据库查询次数
-            OrderModel o=orderDao.selectByPrimaryKey(orderModel.getId());
-            if(o.getOrderStatus()!=0){
-                return false;
+        
+        // 更新订单
+        return updateById(orderModel);
+    }
+
+    @Override
+    public List<OrderModel> getMyOrder(Long userId){
+        // 构建查询条件
+        LambdaQueryWrapper<OrderModel> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(OrderModel::getUserId, userId)
+                   .orderByDesc(OrderModel::getCreateTime);
+        
+        // 执行查询
+        List<OrderModel> orders = list(queryWrapper);
+        
+        // 查询关联的闲置物品
+        if (!orders.isEmpty()) {
+            List<Long> idleIds = new ArrayList<>();
+            for (OrderModel order : orders) {
+                if (order.getIdleId() != null) {
+                    idleIds.add(order.getIdleId());
+                }
             }
-            IdleItemModel idleItemModel=idleItemDao.selectByPrimaryKey(o.getIdleId());
-            if(idleItemModel.getIdleStatus()==2){
-                IdleItemModel idleItem=new IdleItemModel();
-                idleItem.setId(o.getIdleId());
-                idleItem.setUserId(idleItemModel.getUserId());
-                idleItem.setIdleStatus((byte)1);
-                if(orderDao.updateByPrimaryKeySelective(orderModel)==1){
-                    if(idleItemDao.updateByPrimaryKeySelective(idleItem)==1){
-                        return true;
-                    }else {
-                        new RuntimeException();
+            
+            if (!idleIds.isEmpty()) {
+                LambdaQueryWrapper<IdleItemModel> idleQueryWrapper = new LambdaQueryWrapper<>();
+                idleQueryWrapper.in(IdleItemModel::getId, idleIds);
+                List<IdleItemModel> idleItems = idleItemDao.selectList(idleQueryWrapper);
+                
+                Map<Long, IdleItemModel> idleMap = new HashMap<>();
+                for (IdleItemModel idle : idleItems) {
+                    idleMap.put(idle.getId(), idle);
+                }
+                
+                for (OrderModel order : orders) {
+                    if (order.getIdleId() != null) {
+                        order.setIdleItem(idleMap.get(order.getIdleId()));
                     }
                 }
-                return false;
-            }else{
-                if(orderDao.updateByPrimaryKeySelective(orderModel)==1){
-                    return true;
-                }else {
-                    new RuntimeException();
+            }
+        }
+        
+        return orders;
+    }
+
+    @Override
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public List<OrderModel> getMySoldIdle(Long userId){
+        // 查询用户的闲置物品IDs
+        LambdaQueryWrapper<IdleItemModel> itemQueryWrapper = new LambdaQueryWrapper<>();
+        itemQueryWrapper.eq(IdleItemModel::getUserId, userId)
+                       .select(IdleItemModel::getId);
+        
+        List<IdleItemModel> idleItems = idleItemDao.selectList(itemQueryWrapper);
+        
+        if(idleItems.isEmpty()) {
+            return new ArrayList<>();
+        }
+        
+        // 提取闲置物品IDs
+        List<Long> idleIds = new ArrayList<>();
+        for(IdleItemModel item : idleItems) {
+            idleIds.add(item.getId());
+        }
+        
+        // 查询这些闲置物品对应的订单
+        LambdaQueryWrapper<OrderModel> orderQueryWrapper = new LambdaQueryWrapper<>();
+        orderQueryWrapper.in(OrderModel::getIdleId, idleIds)
+                        .orderByDesc(OrderModel::getCreateTime);
+        
+        List<OrderModel> orders = list(orderQueryWrapper);
+        
+        // 关联闲置物品信息
+        Map<Long, IdleItemModel> idleMap = new HashMap<>();
+        for (IdleItemModel idle : idleItems) {
+            idleMap.put(idle.getId(), idle);
+        }
+        
+        for (OrderModel order : orders) {
+            if (order.getIdleId() != null) {
+                order.setIdleItem(idleMap.get(order.getIdleId()));
+            }
+        }
+        
+        return orders;
+    }
+
+    @Override
+    public PageVo<OrderModel> getAllOrder(int page, int nums){
+        // 构建分页对象
+        IPage<OrderModel> pageParam = new Page<>(page, nums);
+        
+        // 构建查询条件
+        LambdaQueryWrapper<OrderModel> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.orderByDesc(OrderModel::getCreateTime);
+        
+        // 执行分页查询
+        IPage<OrderModel> result = page(pageParam, queryWrapper);
+        
+        // 查询关联的闲置物品
+        List<OrderModel> orders = result.getRecords();
+        if (!orders.isEmpty()) {
+            List<Long> idleIds = new ArrayList<>();
+            for (OrderModel order : orders) {
+                if (order.getIdleId() != null) {
+                    idleIds.add(order.getIdleId());
+                }
+            }
+            
+            if (!idleIds.isEmpty()) {
+                LambdaQueryWrapper<IdleItemModel> idleQueryWrapper = new LambdaQueryWrapper<>();
+                idleQueryWrapper.in(IdleItemModel::getId, idleIds);
+                List<IdleItemModel> idleItems = idleItemDao.selectList(idleQueryWrapper);
+                
+                Map<Long, IdleItemModel> idleMap = new HashMap<>();
+                for (IdleItemModel idle : idleItems) {
+                    idleMap.put(idle.getId(), idle);
+                }
+                
+                for (OrderModel order : orders) {
+                    if (order.getIdleId() != null) {
+                        order.setIdleItem(idleMap.get(order.getIdleId()));
+                    }
                 }
             }
         }
-        return orderDao.updateByPrimaryKeySelective(orderModel)==1;
-    }
-    /**
-     * 获取我的所有订单
-     * 同时查询出对应的闲置信息，
-     * 未做分页
-     * userId建索引
-     * @param userId
-     * @return
-     */
-    public List<OrderModel> getMyOrder(Long userId){
-        List<OrderModel> list=orderDao.getMyOrder(userId);
-        if(list.size()>0){
-            List<Long> idleIdList=new ArrayList<>();
-            for(OrderModel i:list){
-                idleIdList.add(i.getIdleId());
-            }
-
-            /*这里还有错误，购物车结算订单后，多个商品需要生成购物记录，需要将订单中idle_items读取出来，通过idle_items查询出商品列表显示出来订单，
-            订单的信息中也需要修改，将多个商品信息保存*/
-
-            List<IdleItemModel> idleItemModelList=idleItemDao.findIdleByList(idleIdList);
-            Map<Long,IdleItemModel> map=new HashMap<>();
-            for(IdleItemModel idle:idleItemModelList){
-                map.put(idle.getId(),idle);
-            }
-            for(OrderModel i:list){
-                i.setIdleItem(map.get(i.getIdleId()));
-            }
-        }
-        return list;
-    }
-
-    /**
-     * 查询用户卖出的闲置
-     * @param userId
-     * @return
-     */
-    @Transactional(isolation = Isolation.READ_COMMITTED)
-    public List<OrderModel> getMySoldIdle(Long userId){
-        List<IdleItemModel> list=idleItemDao.getAllIdleItem(userId);
-        List<OrderModel> orderList=null;
-        if(list.size()>0){
-            List<Long> idleIdList=new ArrayList<>();
-            for(IdleItemModel i:list){
-                idleIdList.add(i.getId());
-            }
-            orderList=orderDao.findOrderByIdleIdList(idleIdList);
-            Map<Long,IdleItemModel> map=new HashMap<>();
-            for(IdleItemModel idle:list){
-                map.put(idle.getId(),idle);
-            }
-            for(OrderModel o:orderList){
-                o.setIdleItem(map.get(o.getIdleId()));
-            }
-        }
-        return orderList;
-    }
-
-    public PageVo<OrderModel> getAllOrder(int page, int nums){
-        List<OrderModel> list=orderDao.getAllOrder((page-1)*nums,nums);
-        if(list.size()>0){
-            List<Long> idleIdList=new ArrayList<>();
-            for(OrderModel i:list){
-                idleIdList.add(i.getIdleId());
-            }
-            List<IdleItemModel> idleItemModelList=idleItemDao.findIdleByList(idleIdList);
-            Map<Long,IdleItemModel> map=new HashMap<>();
-            for(IdleItemModel idle:idleItemModelList){
-                map.put(idle.getId(),idle);
-            }
-            for(OrderModel i:list){
-                i.setIdleItem(map.get(i.getIdleId()));
-            }
-        }
-        int count=orderDao.countAllOrder();
-        return new PageVo<>(list,count);
+        
+        // 返回结果
+        return new PageVo<>(orders, (int)result.getTotal());
     }
 
     @Override
     public FavoriteModel getShopCar(UserModel user, HttpServletRequest request) {
-        return null;
+        // 这个方法涉及会话处理，需要根据具体实现调整
+        return (FavoriteModel) request.getSession().getAttribute("shoppingCar_" + user.getId());
     }
 
+    @Override
     public boolean deleteOrder(Long id){
-        return orderDao.deleteByPrimaryKey(id)==1;
+        return removeById(id);
     }
 
     @Override
     @Transactional
-    public OrderModel createOrder(OrderVo orderVo,String userid) {
-        try{
-            OrderModel model = new OrderModel();
-
-            model.setOrderNumber(IdFactoryUtil.getOrderId());
-
-            model.setCreateTime(new Date());
-            model.setOrderStatus((byte) 0);
-            model.setPaymentStatus((byte)0);
-            model.setOrderPrice(orderVo.getTotal_price());
-            model.setUserId(Long.valueOf(userid));
-
-            /*使用fastjson将其序列化为string格式，存储到数据库中*/
-            model.setOrderVoList(orderVo);
-            String idleItemsJson = objectMapper.writeValueAsString(model.getOrderVoList());
-            model.setIdle_items(idleItemsJson);
-
-            int insert = orderDao.insert(model);
-
-            if (insert>0){
-                idleItemDao.updateStatusByIds(orderVo.getIdleItemIds());
-                return model;
+    public OrderModel createOrder(OrderVo orderVo, String userid) {
+        try {
+            // 创建订单
+            OrderModel orderModel = new OrderModel();
+            orderModel.setOrderNumber(IdFactoryUtil.getOrderId());
+            orderModel.setCreateTime(new Date());
+            orderModel.setUserId(Long.valueOf(userid));
+            orderModel.setOrderStatus((byte) 0);
+            orderModel.setPaymentStatus((byte) 0);
+            orderModel.setOrderPrice(orderVo.getTotal_price());
+            
+            // 序列化订单项
+            orderModel.setOrderVoList(orderVo);
+            String idleItemsJson = objectMapper.writeValueAsString(orderModel.getOrderVoList());
+            orderModel.setIdle_items(idleItemsJson);
+            
+            // 保存订单
+            if(save(orderModel)) {
+                // 批量更新闲置物品状态
+                List<String> idleItemIds = orderVo.getIdleItemIds();
+                if (idleItemIds != null && !idleItemIds.isEmpty()) {
+                    for (String idStr : idleItemIds) {
+                        Long idleId = Long.valueOf(idStr);
+                        LambdaUpdateWrapper<IdleItemModel> updateWrapper = new LambdaUpdateWrapper<>();
+                        updateWrapper.eq(IdleItemModel::getId, idleId)
+                                    .set(IdleItemModel::getIdleStatus, 1); // 设置为已下架
+                        idleItemDao.update(null, updateWrapper);
+                    }
+                }
+                
+                // 创建自动取消任务
+                OrderTask task = new OrderTask(orderModel, 30 * 60);
+                OrderTaskHandler.addOrder(task);
+                
+                return orderModel;
             }
-        }catch (JsonProcessingException e) {
+        } catch (JsonProcessingException e) {
             e.printStackTrace();
         }
+        
         return null;
     }
-
 }

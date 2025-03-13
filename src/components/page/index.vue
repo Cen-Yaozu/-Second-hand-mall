@@ -6,7 +6,7 @@
         <app-body>
             <div class="home-container">
                 <div class="home-header">
-                    <h1 class="main-title">校易购</h1>
+                    <h1 class="main-title">淘易阁</h1>
                     <p class="sub-title">发现校园里的闲置宝藏</p>
                 </div>
 
@@ -29,7 +29,7 @@
                         @click.native="toDetails(idle)">
                         <div class="product-image">
                             <el-image
-                                :src="idle.imgUrl"
+                                :src="getImageUrl(idle.imgUrl)"
                                 fit="cover">
                                 <div slot="error" class="image-slot">
                                     <i class="el-icon-picture-outline">无图</i>
@@ -47,7 +47,7 @@
                             </div>
                             <div class="product-time">{{ idle.timeStr }}</div>
                             <div class="product-user">
-                                <el-avatar :size="24" :src="idle.user.avatar"></el-avatar>
+                                <el-avatar :size="24" :src="getAvatarUrl(idle.user.avatar)"></el-avatar>
                                 <span class="user-name">{{ idle.user.nickname }}</span>
                             </div>
                         </div>
@@ -123,18 +123,42 @@
                         page: page,
                         nums: 8
                     }).then(res => {
-                        console.log(res);
-                        let list = res.data.list;
-                        for (let i = 0; i < list.length; i++) {
-                            list[i].timeStr = list[i].releaseTime.substring(0, 10) + " " + list[i].releaseTime.substring(11, 19);
-                            let pictureList = JSON.parse(list[i].pictureList);
-                            list[i].imgUrl = pictureList.length > 0 ? pictureList[0] : '';
+                        console.log('获取分类商品列表:', res);
+                        if (res.status_code === 1 && res.data && res.data.list) {
+                            let list = res.data.list;
+                            for (let i = 0; i < list.length; i++) {
+                                list[i].timeStr = list[i].releaseTime.substring(0, 10) + " " + list[i].releaseTime.substring(11, 19);
+                                try {
+                                    let pictureList = list[i].pictureList;
+                                    if (typeof pictureList === 'string') {
+                                        try {
+                                            // 尝试解析JSON
+                                            pictureList = JSON.parse(pictureList);
+                                        } catch (e) {
+                                            // 如果JSON解析失败，尝试按逗号分割
+                                            if (pictureList.includes(',')) {
+                                                pictureList = pictureList.split(',');
+                                            } else {
+                                                pictureList = [pictureList];
+                                            }
+                                        }
+                                    }
+                                    list[i].imgUrl = pictureList && pictureList.length > 0 ? pictureList[0].trim() : '';
+                                } catch (error) {
+                                    console.error('处理图片列表出错:', error, list[i]);
+                                    list[i].imgUrl = '';
+                                }
+                            }
+                            this.idleList = list;
+                            this.totalItem = res.data.count;
+                        } else {
+                            this.idleList = [];
+                            this.totalItem = 0;
+                            console.error('获取商品列表失败:', res);
                         }
-                        this.idleList = list;
-                        this.totalItem=res.data.count;
-                        console.log(this.totalItem);
                     }).catch(e => {
-                        console.log(e)
+                        console.error('请求失败:', e);
+                        this.$message.error('获取商品列表失败');
                     }).finally(()=>{
                         loading.close();
                     })
@@ -143,18 +167,42 @@
                         page: page,
                         nums: 8
                     }).then(res => {
-                        console.log(res);
-                        let list = res.data.list;
-                        for (let i = 0; i < list.length; i++) {
-                            list[i].timeStr = list[i].releaseTime.substring(0, 10) + " " + list[i].releaseTime.substring(11, 19);
-                            let pictureList = JSON.parse(list[i].pictureList);
-                            list[i].imgUrl = pictureList.length > 0 ? pictureList[0] : '';
+                        console.log('获取全部商品列表:', res);
+                        if (res.status_code === 1 && res.data && res.data.list) {
+                            let list = res.data.list;
+                            for (let i = 0; i < list.length; i++) {
+                                list[i].timeStr = list[i].releaseTime.substring(0, 10) + " " + list[i].releaseTime.substring(11, 19);
+                                try {
+                                    let pictureList = list[i].pictureList;
+                                    if (typeof pictureList === 'string') {
+                                        try {
+                                            // 尝试解析JSON
+                                            pictureList = JSON.parse(pictureList);
+                                        } catch (e) {
+                                            // 如果JSON解析失败，尝试按逗号分割
+                                            if (pictureList.includes(',')) {
+                                                pictureList = pictureList.split(',');
+                                            } else {
+                                                pictureList = [pictureList];
+                                            }
+                                        }
+                                    }
+                                    list[i].imgUrl = pictureList && pictureList.length > 0 ? pictureList[0].trim() : '';
+                                } catch (error) {
+                                    console.error('处理图片列表出错:', error, list[i]);
+                                    list[i].imgUrl = '';
+                                }
+                            }
+                            this.idleList = list;
+                            this.totalItem = res.data.count;
+                        } else {
+                            this.idleList = [];
+                            this.totalItem = 0;
+                            console.error('获取商品列表失败:', res);
                         }
-                        this.idleList = list;
-                        this.totalItem=res.data.count;
-                        console.log(this.totalItem);
                     }).catch(e => {
-                        console.log(e)
+                        console.error('请求失败:', e);
+                        this.$message.error('获取商品列表失败');
                     }).finally(()=>{
                         loading.close();
                     })
@@ -171,6 +219,44 @@
             },
             toDetails(idle) {
                 this.$router.push({path: '/details', query: {id: idle.id}});
+            },
+            getImageUrl(url) {
+                // 检查url是否已经是HTTP URL
+                if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
+                    return url;
+                }
+                
+                // 检查url是否是一个本地文件路径
+                if (url && (url.startsWith('/') || url.startsWith('D:') || url.includes('\\') || url.includes('/'))) {
+                    // 如果是本地路径，则转换为服务器URL
+                    // 这里假设文件名是路径最后的部分
+                    const fileName = url.split(/[/\\]/).pop();
+                    // 构建访问URL，端口改为8082
+                    return `http://localhost:8082/image?imageName=${fileName}`;
+                }
+                
+                // 如果是简单的文件名，直接构建访问URL
+                if (url && url.trim() !== '') {
+                    return `http://localhost:8082/image?imageName=${url}`;
+                }
+                
+                // 其他情况直接返回
+                return url;
+            },
+            getAvatarUrl(url) {
+                // 检查url是否已经是HTTP URL
+                if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
+                    // 用本地默认头像替代外部URL
+                    return `http://localhost:8082/image?imageName=default_avatar.webp`;
+                }
+                
+                // 如果是简单的文件名，直接构建访问URL
+                if (url && url.trim() !== '') {
+                    return `http://localhost:8082/image?imageName=${url}`;
+                }
+                
+                // 其他情况使用默认头像
+                return `http://localhost:8082/image?imageName=default_avatar.webp`;
             }
         }
     }

@@ -1,5 +1,7 @@
 package com.second.hand.trading.server.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.second.hand.trading.server.dao.IdleItemDao;
 import com.second.hand.trading.server.dao.MessageDao;
 import com.second.hand.trading.server.dao.UserDao;
@@ -16,7 +18,7 @@ import java.util.List;
 import java.util.Map;
 
 @Service
-public class MessageServiceImpl implements MessageService {
+public class MessageServiceImpl extends ServiceImpl<MessageDao, MessageModel> implements MessageService {
 
     @Resource
     private MessageDao messageDao;
@@ -42,7 +44,7 @@ public class MessageServiceImpl implements MessageService {
      * @return
      */
     public boolean deleteMessage(Long id){
-        return messageDao.deleteByPrimaryKey(id)==1;
+        return removeById(id);
     }
 
     /**
@@ -51,7 +53,7 @@ public class MessageServiceImpl implements MessageService {
      * @return
      */
     public MessageModel getMessage(Long id){
-        return messageDao.selectByPrimaryKey(id);
+        return getById(id);
     }
 
     /**
@@ -81,13 +83,20 @@ public class MessageServiceImpl implements MessageService {
             for(MessageModel i:list){
                 idleIdList.add(i.getIdleId());
             }
-            List<IdleItemModel> idleList=idleItemDao.findIdleByList(idleIdList);
-            Map<Long,IdleItemModel> idleMap=new HashMap<>();
-            for(IdleItemModel idle:idleList){
-                idleMap.put(idle.getId(),idle);
-            }
-            for(MessageModel i:list){
-                i.setIdle(idleMap.get(i.getIdleId()));
+            // 使用MyBatis-Plus的方式查询闲置物品
+            if (!idleIdList.isEmpty()) {
+                LambdaQueryWrapper<IdleItemModel> queryWrapper = new LambdaQueryWrapper<>();
+                queryWrapper.in(IdleItemModel::getId, idleIdList);
+                List<IdleItemModel> idleList = idleItemDao.selectList(queryWrapper);
+                
+                Map<Long, IdleItemModel> idleMap = new HashMap<>();
+                for (IdleItemModel idle : idleList) {
+                    idleMap.put(idle.getId(), idle);
+                }
+                
+                for (MessageModel i : list) {
+                    i.setIdle(idleMap.get(i.getIdleId()));
+                }
             }
         }
         return list;

@@ -56,22 +56,36 @@
                                 :on-remove="fileHandleRemove"
                                 :on-success="fileHandleSuccess"
                                 :on-change="imgChange"
-                                action="http://localhost:8080/file/"
+                                action="http://localhost:8082/file"
                                 list-type="picture-card"
                                 :file-list="fileList"
+                                :before-upload="beforeUpload"
                             >
                                 <i class="el-icon-plus"></i>
                             </el-upload>
                         </template>
                         <template v-else>
                             <!-- 显示模式下的图片列表 -->
+                            <div v-loading="imageLoading" class="image-container">
                                 <el-image
-                                    v-for="(imgUrl, i) in idleItemInfo.pictureList"
+                                    v-for="(imgUrl, i) in processedPictureList"
                                     :key="i"
                                     style="width: 90%; margin-bottom: 2px;"
-                                    :src="imgUrl"
+                                    :src="getImageUrl(imgUrl)"
                                     fit="contain"
-                                ></el-image>
+                                    @load="handleImageLoad"
+                                    @error="handleImageError"
+                                >
+                                    <div slot="error" class="image-slot">
+                                        <i class="el-icon-picture-outline"></i>
+                                        <p>图片加载失败</p>
+                                    </div>
+                                </el-image>
+                            </div>
+                            <div v-if="!processedPictureList.length" class="no-image">
+                                <i class="el-icon-picture-outline"></i>
+                                <p>暂无图片</p>
+                            </div>
                         </template>
                     </div>
                 </div>
@@ -106,7 +120,7 @@
                                         {{mes.toU.nickname?' @'+mes.toU.nickname+'：'+
                                         mes.toM.content.substring(0,10)+
                                         (mes.toM.content.length>10?'...':''):''}}</div>
-                                    <div class="message-content" v-html="mes.content">{{mes.content}}</div>
+                                    <div class="message-content" v-html="mes.content"></div>
                                     <div class="message-time">{{mes.createTime}}</div>
                                 </div>
                             </div>
@@ -166,12 +180,32 @@
                 editingIdleItem:null,
                 isMaster:false,
                 isFavorite:true,
-                favoriteId:0
+                favoriteId:0,
+                imageLoading: true,
+                loadedImages: 0,
+                totalImages: 0
             };
         },
         computed: {
+            processedPictureList() {
+                if (!this.idleItemInfo.pictureList) return [];
+                if (typeof this.idleItemInfo.pictureList === 'string') {
+                    try {
+                        return JSON.parse(this.idleItemInfo.pictureList);
+                    } catch (e) {
+                        console.error('解析图片列表失败:', e);
+                        return [];
+                    }
+                }
+                return Array.isArray(this.idleItemInfo.pictureList) 
+                    ? this.idleItemInfo.pictureList 
+                    : [this.idleItemInfo.pictureList];
+            },
             fileList() {
-                return this.idleItemInfo.pictureList.map(img => ({ url: img }));
+                return this.processedPictureList.map(img => ({
+                    name: img,
+                    url: this.getImageUrl(img)
+                }));
             }
         },
         created(){
@@ -179,34 +213,68 @@
         },
         methods: {
             getMyIdleById(){
-                let id=this.$route.query.id;
+                this.imageLoading = true;
+                let id = this.$route.query.id;
                 this.$api.getIdleItem({
-                    id:id
-                }).then(res=>{
-                    console.log(res);
-                    if(res.data){
-                        let list=res.data.idleDetails.split(/\r?\n/);
-                        let str='';
-                        for(let i=0;i<list.length;i++){
-                            str+=list[i];
+                    id: id
+                }).then(res => {
+                    console.log('商品详情原始数据:', res);
+                    if (res.data) {
+                        // 处理商品详情的换行
+                        let list = res.data.idleDetails.split(/\r?\n/);
+                        let str = '';
+                        for (let i = 0; i < list.length; i++) {
+                            str += list[i];
                         }
-                        res.data.idleDetails=str;
-                        res.data.pictureList=JSON.parse(res.data.pictureList);
-                        this.idleItemInfo=res.data;
-                        console.log(this.idleItemInfo);
-                        let userId=this.getCookie('shUserId');
-                        console.log('userid',userId)
-                        if(userId == this.idleItemInfo.userId){
-                            console.log('isMaster');
-                            this.isMaster=true;
+                        res.data.idleDetails = str;
+
+                        // 处理图片列表
+                        try {
+                            if (typeof res.data.pictureList === 'string') {
+                                const pictureList = JSON.parse(res.data.pictureList);
+                                res.data.pictureList = Array.isArray(pictureList) ? pictureList : [pictureList];
+                            }
+                            console.log('处理后的图片列表:', res.data.pictureList);
+                        } catch (e) {
+                            console.error('解析图片列表失败:', e);
+                            res.data.pictureList = [];
+                        }
+
+                        this.idleItemInfo = res.data;
+                        this.totalImages = this.processedPictureList.length;
+                        this.loadedImages = 0;
+
+                        // 预加载图片
+                        this.processedPictureList.forEach(imgUrl => {
+                            const img = new Image();
+                            img.onload = () => {
+                                this.loadedImages++;
+                                if (this.loadedImages >= this.totalImages) {
+                                    this.imageLoading = false;
+                                }
+                            };
+                            img.onerror = (e) => {
+                                console.error('图片预加载失败:', imgUrl, e);
+                                this.loadedImages++;
+                                if (this.loadedImages >= this.totalImages) {
+                                    this.imageLoading = false;
+                                }
+                            };
+                            img.src = this.getImageUrl(imgUrl);
+                        });
+
+                        let userId = this.getCookie('shUserId');
+                        if (userId == this.idleItemInfo.userId) {
+                            this.isMaster = true;
                         }
                         this.checkFavorite();
                         this.checkMyIdle();
                         this.getAllIdleMessage();
                     }
-                    $('html,body').animate({
-                        scrollTop: 0
-                    }, {duration: 500, easing: "swing"});
+                }).catch(error => {
+                    console.error('获取商品详情失败:', error);
+                    this.$message.error('获取商品详情失败，请重试');
+                    this.imageLoading = false;
                 });
             },
             saveChanges(idleItemInfo) {
@@ -229,28 +297,40 @@
             },
             fileHandleRemove(file,fileList) {
                 console.log(file, fileList);
-                // 假设fileList是由el-upload维护的，这里需要间接操作，找到file在fileList中的URL
-                const urlToRemove = file.url; // 假设file.response.data是图片URL
-                // 假设fileList与idleItemInfo.pictureList同步，直接根据URL移除
+                // 修改：现在需要找到对应的本地路径
+                const urlToRemove = file.localPath || file.url; 
+                // 在pictureList中查找对应项
                 const index = this.idleItemInfo.pictureList.indexOf(urlToRemove);
                 console.log(this)
 
                 if (index > -1) {
-                    // 找到了匹配的URL，从idleItemInfo.pictureList中移除
+                    // 找到了匹配的项，从idleItemInfo.pictureList中移除
                     this.idleItemInfo.pictureList.splice(index, 1);
                     this.$forceUpdate();
                 } else {
-                    console.warn('URL not found in the list to remove.');
+                    console.warn('Path not found in the list to remove.');
                 }
             },
             fileHandlePreview(file) {
                 console.log(file);
-                this.dialogImageUrl=file.response.data;
+                // 修改：如果response.data是对象，则使用accessUrl
+                if(file.response && file.response.data) {
+                    const fileData = file.response.data;
+                    this.dialogImageUrl = fileData.accessUrl || fileData;
+                } else {
+                    this.dialogImageUrl = file.url;
+                }
                 this.imgDialogVisible=true;
             },
-            fileHandleSuccess(response, file, fileList){
-                console.log("file:",response,file,fileList);
-                this.idleItemInfo.pictureList.push(response.data);
+            fileHandleSuccess(response, file, fileList) {
+                console.log("file:", response, file, fileList);
+                // 修改：现在response.data是一个包含localPath和accessUrl的对象
+                const fileData = response.data;
+                // 将本地路径添加到pictureList
+                this.idleItemInfo.pictureList.push(fileData.localPath);
+                // 但在界面展示时使用accessUrl
+                file.url = fileData.accessUrl;
+                file.localPath = fileData.localPath; // 保存本地路径便于后续操作
             },
             editButton(){
                 this.isEditing = !this.isEditing;
@@ -416,7 +496,57 @@
                 }else{
                     this.$message.error("留言为空！");
                 }
-            }
+            },
+            getImageUrl(url) {
+                // 检查url是否已经是HTTP URL
+                if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
+                    return url;
+                }
+                
+                // 检查url是否是一个本地文件路径
+                if (url && (url.startsWith('/') || url.startsWith('D:') || url.includes('\\') || url.includes('/'))) {
+                    // 如果是本地路径，则转换为服务器URL
+                    // 这里假设文件名是路径最后的部分
+                    const fileName = url.split(/[/\\]/).pop();
+                    // 构建访问URL
+                    return `http://localhost:8082/image?imageName=${fileName}`;
+                }
+                
+                // 如果是简单的文件名，直接构建访问URL
+                if (url && url.trim() !== '') {
+                    return `http://localhost:8082/image?imageName=${url}`;
+                }
+                
+                // 其他情况直接返回
+                return url;
+            },
+            handleImageLoad() {
+                this.loadedImages++;
+                if (this.loadedImages >= this.totalImages) {
+                    this.imageLoading = false;
+                }
+            },
+            handleImageError(e) {
+                console.error('图片加载失败:', e);
+                this.loadedImages++;
+                if (this.loadedImages >= this.totalImages) {
+                    this.imageLoading = false;
+                }
+            },
+            beforeUpload(file) {
+                const isImage = file.type.startsWith('image/');
+                const isLt2M = file.size / 1024 / 1024 < 2;
+
+                if (!isImage) {
+                    this.$message.error('只能上传图片文件!');
+                    return false;
+                }
+                if (!isLt2M) {
+                    this.$message.error('图片大小不能超过 2MB!');
+                    return false;
+                }
+                return true;
+            },
         },
     }
 </script>
@@ -536,5 +666,39 @@
     .message-time{
         font-size: 13px;
         color: #555555;
+    }
+    .image-container {
+        width: 100%;
+        min-height: 200px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .no-image {
+        text-align: center;
+        padding: 40px;
+        color: #909399;
+    }
+
+    .no-image i {
+        font-size: 48px;
+        margin-bottom: 10px;
+    }
+
+    .image-slot {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
+        background: #f5f7fa;
+        color: #909399;
+    }
+
+    .image-slot i {
+        font-size: 24px;
+        margin-bottom: 10px;
     }
 </style>

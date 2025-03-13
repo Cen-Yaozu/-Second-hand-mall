@@ -318,7 +318,7 @@
                             cancelButtonText: '取消',
                             type: 'warning'
                         }).then(() => {
-                            var address = "http://localhost:8080/alipay/pay?subject=" + orderInfo.orderNumber+ "&traceNo="+
+                            var address = "http://localhost:8087/alipay/pay?subject=" + orderInfo.orderNumber+ "&traceNo=" +
                                 orderInfo.id + "&totalAmount=" + orderInfo.idleItem.idlePrice;
 
                             // console.log(res.data[0]);

@@ -8,7 +8,7 @@
                     <div class="user-info-details">
 
                         <el-upload
-                                action="http://localhost:8080/file/"
+                                action="http://localhost:8082/file"
                                 :on-success="fileHandleSuccess"
                                 :file-list="imgFileList"
                                 accept="image/*"
@@ -93,9 +93,7 @@
                                     <div class="idle-container-list-title">
                                         {{item.idleName}}
                                     </div>
-                                    <div class="idle-container-list-idle-details" v-html="item.idleDetails">
-                                        {{item.idleDetails}}
-                                    </div>
+                                    <div class="idle-container-list-idle-details" v-html="item.idleDetails"></div>
                                     <div class="idle-container-list-idle-time">{{item.timeStr}}</div>
 
                                     <div class="idle-item-foot">

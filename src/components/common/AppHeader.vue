@@ -4,7 +4,7 @@
             <div class="app-name">
                 <router-link to="/">
                     <img :src="logoPath" class="logo-image"/>
-                    <span class="logo-text">校易购</span>
+                    <span class="logo-text">淘易阁</span>
                 </router-link>
             </div>
             <div class="search-container">

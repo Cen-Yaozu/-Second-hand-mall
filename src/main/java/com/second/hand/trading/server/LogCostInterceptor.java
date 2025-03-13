@@ -1,5 +1,6 @@
 package com.second.hand.trading.server;
 
+import org.jetbrains.annotations.NotNull;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.ModelAndView;
 
@@ -23,7 +24,7 @@ public class LogCostInterceptor implements HandlerInterceptor {
     }
 
     @Override
-    public void postHandle(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Object o, ModelAndView modelAndView) throws Exception {
+    public void postHandle(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, @NotNull Object o, ModelAndView modelAndView) throws Exception {
         System.out.println("请求："+httpServletRequest.getRequestURI()+"?"+httpServletRequest.getQueryString()+"，耗时"+(System.currentTimeMillis()-start)+"ms  "+new Date());
     }
 

@@ -33,7 +33,7 @@ public class AdminServiceImpl extends ServiceImpl<AdminDao,AdminModel> implement
     }
 
     public boolean addAdmin(AdminModel adminModel){
-        return adminDao.insert(adminModel)==1;
+        return save(adminModel);
     }
 
     /*
@@ -42,7 +42,7 @@ public class AdminServiceImpl extends ServiceImpl<AdminDao,AdminModel> implement
     @Override
     public boolean updateUser(Long id,String nickname , String password) {
 
-        UserModel userModel = userDao.selectByPrimaryKey(id);
+        UserModel userModel = userDao.selectById(id);
         String s = SecureUtil.sha256(password + userModel.getUserSalt());
         return adminDao.updateUser(id,nickname,s);
     }

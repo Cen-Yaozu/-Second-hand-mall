@@ -30,7 +30,7 @@ public class IdleItemServiceImpl  extends ServiceImpl<IdleItemDao, IdleItemModel
      * @return
      */
     public boolean addIdleItem(IdleItemModel idleItemModel) {
-        return idleItemDao.insert(idleItemModel) == 1;
+        return save(idleItemModel);
     }
 
     /**
@@ -39,9 +39,9 @@ public class IdleItemServiceImpl  extends ServiceImpl<IdleItemDao, IdleItemModel
      * @return
      */
     public IdleItemModel getIdleItem(Long id) {
-        IdleItemModel idleItemModel=idleItemDao.selectByPrimaryKey(id);
-        if(idleItemModel!=null){
-            idleItemModel.setUser(userDao.selectByPrimaryKey(idleItemModel.getUserId()));
+        IdleItemModel idleItemModel = getById(id);
+        if(idleItemModel != null){
+            idleItemModel.setUser(userDao.selectById(idleItemModel.getUserId()));
         }
         return idleItemModel;
     }
@@ -134,7 +134,7 @@ public class IdleItemServiceImpl  extends ServiceImpl<IdleItemDao, IdleItemModel
      * @return
      */
     public boolean updateIdleItem(IdleItemModel idleItemModel){
-        return idleItemDao.updateByPrimaryKeySelective(idleItemModel)==1;
+        return updateById(idleItemModel);
     }
 
     public PageVo<IdleItemModel> adminGetIdleList(int status, int page, int nums) {
@@ -159,12 +159,8 @@ public class IdleItemServiceImpl  extends ServiceImpl<IdleItemDao, IdleItemModel
 
     @Override
     public boolean isMyIdle(Long shUserId, Long idleId) {
-        IdleItemModel idleItemModel = idleItemDao.selectByPrimaryKey(idleId);
-
-        if (idleItemModel.getUserId().equals(shUserId)){
-            return true;
-        }
-        return false;
+        IdleItemModel idleItemModel = getById(idleId);
+        return idleItemModel != null && idleItemModel.getUserId().equals(shUserId);
     }
 
 

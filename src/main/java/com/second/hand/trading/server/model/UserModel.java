@@ -1,5 +1,8 @@
 package com.second.hand.trading.server.model;
 
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
 import java.io.Serializable;
 import java.util.Date;
 
@@ -7,10 +10,12 @@ import java.util.Date;
  * sh_user
  * @author myl
  */
+@TableName("sh_user")
 public class UserModel implements Serializable {
     /**
      * 自增主键
      */
+    @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 
     /**

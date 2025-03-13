@@ -1,5 +1,6 @@
 package com.second.hand.trading.server.service.impl;
 
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.second.hand.trading.server.dao.OrderAddressDao;
 import com.second.hand.trading.server.model.OrderAddressModel;
 import com.second.hand.trading.server.service.OrderAddressService;
@@ -8,7 +9,7 @@ import org.springframework.stereotype.Service;
 import javax.annotation.Resource;
 
 @Service
-public class OrderAddressServiceImpl implements OrderAddressService {
+public class OrderAddressServiceImpl extends ServiceImpl<OrderAddressDao, OrderAddressModel> implements OrderAddressService {
 
     @Resource
     private OrderAddressDao orderAddressDao;
@@ -19,7 +20,7 @@ public class OrderAddressServiceImpl implements OrderAddressService {
      * @return
      */
     public boolean addOrderAddress(OrderAddressModel orderAddressModel){
-        return orderAddressDao.insert(orderAddressModel)==1;
+        return save(orderAddressModel);
     }
 
     /**
@@ -29,7 +30,7 @@ public class OrderAddressServiceImpl implements OrderAddressService {
      */
     public boolean updateOrderAddress(OrderAddressModel orderAddressModel){
         orderAddressModel.setOrderId(null);
-        return orderAddressDao.updateByPrimaryKeySelective(orderAddressModel)==1;
+        return updateById(orderAddressModel);
     }
 
     /**

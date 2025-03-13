@@ -9,22 +9,10 @@ import java.util.List;
 
 @Mapper
 public interface FavoriteDao extends BaseMapper<FavoriteModel> {
-    int deleteByPrimaryKey(Long id);
-
-    int insert(FavoriteModel record);
-
-    int insertSelective(FavoriteModel record);
-
-    FavoriteModel selectByPrimaryKey(Long id);
-
+    // 自定义业务方法
     List<FavoriteModel> getMyFavorite(Long userId);
 
-    Integer checkFavorite(Long userId,Long idleId);
+    Integer checkFavorite(Long userId, Long idleId);
 
-    int updateByPrimaryKeySelective(FavoriteModel record);
-
-    int updateByPrimaryKey(FavoriteModel record);
-
-
-   int deletefavoriteIds(@Param("List") List<String> favoriteIds);
+    int deletefavoriteIds(@Param("List") List<String> favoriteIds);
 }

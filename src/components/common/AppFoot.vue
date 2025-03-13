@@ -3,7 +3,7 @@
         <div class="footer-content">
             <div class="footer-main">
                 <div class="footer-section">
-                    <h3 class="footer-title">校易购</h3>
+                    <h3 class="footer-title">淘易阁</h3>
                     <p class="footer-desc">校园闲置物品交易平台 - 让闲置焕发新生</p>
                 </div>
                 <div class="footer-section">
@@ -13,7 +13,7 @@
                 </div>
             </div>
             <div class="footer-copyright">
-                <p>© {{ currentYear }} 校易购 - 毕业设计项目</p>
+                <p>© {{ currentYear }} 淘易阁 - 毕业设计项目</p>
             </div>
         </div>
     </footer>
