@@ -19,6 +19,7 @@
             </div>
             <div class="action-buttons">
                 <el-button type="primary" icon="el-icon-plus" @click="toRelease">发布闲置/公告</el-button>
+                <el-button type="success" icon="el-icon-star-on" @click="toDonation">爱心捐赠</el-button>
                 <el-button type="primary" icon="el-icon-chat-dot-round" @click="toMessage">
                     消息
                     <el-badge v-if="unreadMessagesCount > 0" :value="unreadMessagesCount" class="message-badge"></el-badge>
@@ -52,7 +53,7 @@
                 nickname:'登录',
                 avatar:'https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png',
                 isLogin:false,
-                unreadMessagesCount:3
+                unreadMessagesCount:0
             };
         },
         created(){
@@ -66,15 +67,37 @@
                         res.data.signInTime=res.data.signInTime.substring(0,10);
                         this.$globalData.userInfo=res.data;
                         this.isLogin=true;
+                        this.fetchUnreadMessageCount();
                     }
                 })
             }else {
                 this.nickname=this.$globalData.userInfo.nickname;
                 this.avatar=this.$globalData.userInfo.avatar;
                 this.isLogin=true;
+                this.fetchUnreadMessageCount();
             }
+            
+            // 监听未读消息更新事件
+            this.$eventBus.$on('update-unread-messages', this.fetchUnreadMessageCount);
+        },
+        beforeDestroy(){
+            // 组件销毁前移除事件监听
+            this.$eventBus.$off('update-unread-messages', this.fetchUnreadMessageCount);
         },
         methods: {
+            fetchUnreadMessageCount() {
+                if (this.isLogin) {
+                    this.$api.getUnreadMessageCount().then(res => {
+                        if (res.status_code === 1) {
+                            this.unreadMessagesCount = res.data || 0;
+                        }
+                    }).catch(err => {
+                        console.error('获取未读消息数量失败:', err);
+                        // 如果API调用失败，使用默认值
+                        this.unreadMessagesCount = 0;
+                    });
+                }
+            },
             searchIdle() {
                 if ('/search' !== this.$route.path) {
                     this.$router.push({path: '/search', query: {searchValue: this.searchValue}});
@@ -97,6 +120,11 @@
             toRelease(){
                 if ('/release' !== this.$route.path) {
                     this.$router.push({path: '/release'});
+                }
+            },
+            toDonation(){
+                if ('/donation' !== this.$route.path) {
+                    this.$router.push({path: '/donation'});
                 }
             },
             /*这里的logout 只是用前端来删除掉浏览器中之前登录过的用户信息，并没有发送请求*/

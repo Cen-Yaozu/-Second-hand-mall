@@ -1,11 +1,13 @@
 <template>
-    <div class="carousel">
-        <div class="carousel-container">
-    <el-carousel  direction="vertical" :autoplay="true">
-        <el-carousel-item v-for="item in urlList" :key="item.url">
-            <h3 class="medium"><img :src="item.url" alt=''/></h3>
-        </el-carousel-item>
-    </el-carousel>
+    <div class="carousel-container">
+        <div class="carousel">
+            <el-carousel height="200px" :interval="4000" arrow="always">
+                <el-carousel-item v-for="(url, index) in urlList" :key="index">
+                    <div class="carousel-image">
+                        <img :src="url" alt="carousel image" />
+                    </div>
+                </el-carousel-item>
+            </el-carousel>
         </div>
     </div>
 </template>
@@ -16,39 +18,32 @@ export default {
     data(){
         return{
             urlList: [
-                {url:"http://5b0988e595225.cdn.sohucs.com/images/20181023/bff9680896c44ccea379162c9eec1483.jpeg"},
-                {url:'https://c01.gaitubao.net/FqEn34L2gM8GooPFyG1JaK8dBnho.jpg'},
-                {url:'https://pics7.baidu.com/feed/9345d688d43f8794fe8261f36713abfe1ad53a84.jpeg'}
+                "http://toutiao.io/assets/reading-9c322ab470b1d7c38c0e17ea24e5ecb7.png",
+                "http://toutiao.io/assets/reading-9c322ab470b1d7c38c0e17ea24e5ecb7.png",
+                "http://toutiao.io/assets/reading-9c322ab470b1d7c38c0e17ea24e5ecb7.png",
             ]
         }
-
     }
-
 };
 </script>
 
 <style scoped>
-.carousel {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
+.carousel-container {
     width: 100%;
-    height: 7%;
-    background: #ffffff;
-    display: flex;
-    justify-content: center;
-    border-bottom: #eeeeee solid ;
-    z-index: 1000;
-    margin: 0;
 }
 
-.carousel-container {
-    width: auto;
+.carousel {
+    margin-bottom: 10px;
+}
+
+.carousel-image {
+    width: 100%;
     height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin: 0;
+}
+
+.carousel-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
 </style>

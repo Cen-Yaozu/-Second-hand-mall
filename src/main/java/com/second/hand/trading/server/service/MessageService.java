@@ -41,4 +41,18 @@ public interface MessageService {
      */
     List<MessageModel> getAllIdleMessage(Long idleId);
 
+    /**
+     * 获取用户未读消息数量
+     * @param userId 用户ID
+     * @return 未读消息数量
+     */
+    int getUnreadMessageCount(Long userId);
+
+    /**
+     * 将用户的所有消息标记为已读
+     * @param userId 用户ID
+     * @return 是否成功
+     */
+    boolean markAllMessagesAsRead(Long userId);
+
 }

@@ -5,6 +5,8 @@ import ElementUI from 'element-ui';
 import 'element-ui/lib/theme-chalk/index.css';
 import './assets/styles/element-plus-style.css';
 import 'babel-polyfill';
+import store from './store';
+import md5 from 'js-md5';
 
 /*
 * Vue.prototype.$axios = axios;
@@ -40,7 +42,10 @@ Vue.use(ElementUI, {
     size: 'medium'
 });
 
+Vue.prototype.$md5 = md5;
 
+// 创建事件总线
+Vue.prototype.$eventBus = new Vue();
 
 /*这里检测用户是否已经登录，登录了才能使用功能*/
 router.beforeEach((to, from, next) => {

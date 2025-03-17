@@ -84,15 +84,15 @@ public class OrderServiceImpl extends ServiceImpl<OrderDao, OrderModel> implemen
     @Transactional(rollbackFor = Exception.class)
     public boolean addOrderHelp(IdleItemModel idleItem, OrderModel orderModel){
         // 检查商品状态
-        if(idleItem.getIdleStatus() != 0) {
+        if(idleItem.getIdleStatus() != 1) {
             return false;
         }
         
         // 更新商品状态为已下架
         LambdaUpdateWrapper<IdleItemModel> updateWrapper = new LambdaUpdateWrapper<>();
         updateWrapper.eq(IdleItemModel::getId, idleItem.getId())
-                    .eq(IdleItemModel::getIdleStatus, 0) // 确保状态为上架中
-                    .set(IdleItemModel::getIdleStatus, 1); // 设置为已下架
+                    .eq(IdleItemModel::getIdleStatus, 1) // 确保状态为上架中
+                    .set(IdleItemModel::getIdleStatus, 2); // 设置为已下架
         
         boolean updated = idleItemDao.update(null, updateWrapper) > 0;
         if(!updated) {

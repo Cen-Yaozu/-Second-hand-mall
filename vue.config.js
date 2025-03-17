@@ -50,6 +50,11 @@ module.exports = {
                 changeOrigin: true,
                 cookieDomainRewrite: 'localhost'
             },
+            '/donation': {
+                target: 'http://localhost:8082',
+                changeOrigin: true,
+                cookieDomainRewrite: 'localhost'
+            },
             '/message': {
                 target: 'http://localhost:8082',
                 changeOrigin: true,

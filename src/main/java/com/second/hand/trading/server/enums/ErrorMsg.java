@@ -30,7 +30,13 @@ public enum ErrorMsg {
     FORM_NUMBER_ERROR("表单id错误"),
     REPEAT_COMMIT_ERROR("请勿重复提交"),
     COMMIT_FAIL_ERROR("提交失败"),
-    FAVORITE_EXIT("收藏已存在");
+    FAVORITE_EXIT("收藏已存在"),
+    NOSIGNIN("未登录或登录已过期"),
+    NOPERMISSION("无权限进行此操作"),
+    REPORT_NOT_EXIST("举报信息不存在"),
+    REPORT_NO_PERMISSION("无权限查看该举报"),
+    REPORT_PARAM_ERROR("处理状态和处理结果不能为空"),
+    REPORT_REASON_EMPTY("驳回理由不能为空");
 
     private String msg;
 

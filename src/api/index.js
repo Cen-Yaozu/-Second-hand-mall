@@ -33,15 +33,15 @@ const api = {
     },
     updateUserPublicInfo(data) {
         return request({
-            url: '/user/info',
-            method: 'post',
+            url: '/user/update-public-info',
+            method: 'put',
             data: data
         });
     },
     updatePassword(query) {
         return request({
-            url: '/user/password',
-            method: 'get',
+            url: '/user/update-password',
+            method: 'put',
             params: query
         });
     },
@@ -147,7 +147,8 @@ const api = {
     alipay(data){
         return request({
             url: '/alipay/pay',
-            method
+            method: 'post',
+            data: data
         })
     },
     getMyOrder(query) {
@@ -255,10 +256,24 @@ const api = {
             params: query
         });
     },
+    // 消息未读状态相关API
+    getUnreadMessageCount() {
+        return request({
+            url: '/message/unread-count',
+            method: 'get'
+        });
+    },
     deleteMessage(query) {
         return request({
             url: '/message/delete',
             method: 'get',
+            params: query
+        });
+    },
+    markMessageAsRead(query) {
+        return request({
+            url: '/message/mark-read',
+            method: 'put',
             params: query
         });
     },
@@ -329,8 +344,8 @@ const api = {
     },
     loginOut(query) {
         return request({
-            url: '/admin/loginOut',
-            method: 'get',
+            url: '/user/logout',
+            method: 'post',
             params: query
         });
     },
@@ -381,6 +396,206 @@ const api = {
             url: 'admin/updateUser',
             method: 'post',
             data: data
+        });
+    },
+
+    // 物品交换功能 对应exchangecontroller
+    createExchangeRequest(data) {
+        return request({
+            url: '/exchange/create',
+            method: 'post',
+            data: data
+        });
+    },
+    getMyExchangeRequests() {
+        return request({
+            url: '/exchange/my-requests',
+            method: 'get'
+        });
+    },
+    getReceivedExchangeRequests() {
+        return request({
+            url: '/exchange/received-requests',
+            method: 'get'
+        });
+    },
+    getExchangeRequestDetail(requestId) {
+        return request({
+            url: `/exchange/detail/${requestId}`,
+            method: 'get'
+        });
+    },
+    acceptExchangeRequest(requestId) {
+        return request({
+            url: `/exchange/accept/${requestId}`,
+            method: 'put'
+        });
+    },
+    rejectExchangeRequest(requestId) {
+        return request({
+            url: `/exchange/reject/${requestId}`,
+            method: 'put'
+        });
+    },
+    completeExchange(requestId) {
+        return request({
+            url: `/exchange/complete/${requestId}`,
+            method: 'put'
+        });
+    },
+
+    // 捐赠功能 对应DonationController
+    createDonationRequest(data) {
+        return request({
+            url: '/donation/create',
+            method: 'post',
+            data: data
+        });
+    },
+    getMyDonationRequests(query) {
+        return request({
+            url: '/donation/my-requests',
+            method: 'get',
+            params: query
+        });
+    },
+    getDonationRequestDetail(query) {
+        return request({
+            url: `/donation/detail/${query.requestId}`,
+            method: 'get',
+            params: query
+        });
+    },
+    cancelDonationRequest(requestId) {
+        return request({
+            url: `/donation/cancel/${requestId}`,
+            method: 'put'
+        });
+    },
+    // 管理员捐赠管理接口
+    getAllDonationRequests(query) {
+        return request({
+            url: '/admin/donation/list',
+            method: 'get',
+            params: query
+        });
+    },
+    reviewDonationRequest(data) {
+        return request({
+            url: '/admin/donation/review',
+            method: 'post',
+            data: data
+        });
+    },
+    completeDonation(requestId) {
+        return request({
+            url: `/donation/admin/complete/${requestId}`,
+            method: 'put'
+        });
+    },
+    
+    // 举报功能
+    createReport(data) {
+        return request({
+            url: '/report/create',
+            method: 'post',
+            data: data
+        });
+    },
+    getMyReports() {
+        return request({
+            url: '/report/my-reports',
+            method: 'get'
+        });
+    },
+    getReportDetail(reportId) {
+        return request({
+            url: `/report/detail/${reportId}`,
+            method: 'get'
+        });
+    },
+    getAdminReportList(query) {
+        return request({
+            url: '/report/admin/list',
+            method: 'get',
+            params: query
+        });
+    },
+    adminHandleReport(data) {
+        return request({
+            url: '/report/admin/approve',
+            method: 'put',
+            data: data
+        });
+    },
+    adminRejectReport(data) {
+        return request({
+            url: '/report/admin/reject',
+            method: 'put',
+            data: data
+        });
+    },
+    cancelReport(data) {
+        return request({
+            url: '/report/cancel',
+            method: 'put',
+            data: data
+        });
+    },
+    
+    // ----- 公告相关接口 -----
+    // 获取公告列表
+    getAnnouncementList(params) {
+        return request({
+            url: '/announcement/list',
+            method: 'get',
+            params: params
+        });
+    },
+    // 获取公告详情
+    getAnnouncementDetail(params) {
+        return request({
+            url: '/announcement/detail',
+            method: 'get',
+            params: params
+        });
+    },
+    // 获取重要公告
+    getImportantAnnouncements(params) {
+        return request({
+            url: '/announcement/important',
+            method: 'get',
+            params: params
+        });
+    },
+    // 创建公告（管理员）
+    createAnnouncement(data) {
+        return request({
+            url: '/admin/announcement/create',
+            method: 'post',
+            data: data
+        });
+    },
+    // 更新公告（管理员）
+    updateAnnouncement(data) {
+        return request({
+            url: '/admin/announcement/update/' + data.id,
+            method: 'put',
+            data: data
+        });
+    },
+    // 删除公告（管理员）
+    deleteAnnouncement(data) {
+        return request({
+            url: '/admin/announcement/delete/' + data.id,
+            method: 'delete'
+        });
+    },
+    // 发布公告（管理员）
+    publishAnnouncement(id) {
+        return request({
+            url: '/admin/announcement/publish/' + id,
+            method: 'put'
         });
     },
 };

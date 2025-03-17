@@ -14,11 +14,13 @@
                             <div class="details-header-user-info-time">{{idleItemInfo.user.signInTime.substring(0,10)}} 加入平台</div>
                         </div>
                     </div>
-                    <div class="details-header-buy" :style="'width:'+(isMaster?'250px;':'280px;')">
-                        <div v-show="idleItemInfo.idlePrice !== 0" style="color: red;font-size: 18px;font-weight: 600;">￥{{idleItemInfo.idlePrice}}</div>
+                    <div class="details-header-buy">
+                        <div v-show="idleItemInfo.idlePrice !== 0" style="color: red;font-size: 18px;font-weight: 600; margin-right: 10px;">￥{{idleItemInfo.idlePrice}}</div>
                         <div v-if="!isMaster&&idleItemInfo.idleStatus!==1" style="color: red;font-size: 16px;">闲置已下架或删除</div>
                         <el-button v-show="idleItemInfo.idlePrice > 0" v-if="!isMaster&&idleItemInfo.idleStatus===1" type="danger" plain @click="buyButton(idleItemInfo)">立即购买</el-button>
                         <el-button v-show="idleItemInfo.idlePrice > 0" v-if="!isMaster&&idleItemInfo.idleStatus===1" type="primary" plain @click="favoriteButton(idleItemInfo)">{{isFavorite?'取消收藏':'加入收藏'}}</el-button>
+                        <el-button v-if="!isMaster&&idleItemInfo.idleStatus===1" type="warning" plain @click="exchangeButton(idleItemInfo)">发起易物交换</el-button>
+                        <el-button v-if="!isMaster" type="info" plain @click="reportButton(idleItemInfo)">举报</el-button>
                         <el-button
                             v-show='idleItemInfo.idlePrice >= 0'
                             v-if="isMaster&&idleItemInfo.idleStatus===1"
@@ -27,6 +29,8 @@
                             @click="isEditing ? saveChanges(idleItemInfo) : editButton()">{{ buttonText }}</el-button>
                         <el-button v-if="isMaster&&idleItemInfo.idleStatus===1" type="danger" @click="changeStatus(idleItemInfo,2)" plain>下架</el-button>
                         <el-button v-if="isMaster&&idleItemInfo.idleStatus===2" type="primary" @click="changeStatus(idleItemInfo,1)" plain>重新上架</el-button>
+                        <el-button v-if="isMaster&&idleItemInfo.idleStatus===1" type="info" plain @click="viewReceivedRequests">查看交换请求</el-button>
+                        <el-button v-if="isMaster&&idleItemInfo.idleStatus===1" type="success" plain @click="donationButton(idleItemInfo)">爱心捐赠</el-button>
                     </div>
                 </div>
 
@@ -132,6 +136,271 @@
                 </div>
             </div>
             <app-foot></app-foot>
+
+            <!-- 添加易物交换弹窗 -->
+            <el-dialog
+                title="发起易物交换"
+                :visible.sync="exchangeDialogVisible"
+                width="60%">
+                <el-form :model="exchangeForm" :rules="exchangeRules" ref="exchangeForm" label-width="120px">
+                    <el-form-item label="交换对象物品" prop="requestItemId">
+                        <div class="exchange-preview-item">
+                            <div v-if="idleItemInfo">
+                                <div class="item-preview">
+                                    <img :src="getImageUrl(processedPictureList[0])" class="preview-img">
+                                    <div class="item-info">
+                                        <div class="item-name">{{ idleItemInfo.idleName }}</div>
+                                        <div class="item-price">¥{{ idleItemInfo.idlePrice }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </el-form-item>
+                    
+                    <el-form-item label="物品所有者">
+                        <div class="owner-info" v-if="idleItemInfo && idleItemInfo.user">
+                            <img :src="idleItemInfo.user.avatar" class="owner-avatar">
+                            <span class="owner-name">{{ idleItemInfo.user.nickname }}</span>
+                        </div>
+                    </el-form-item>
+                    
+                    <el-form-item label="我的交换物品" prop="offerItemId">
+                        <el-select v-model="exchangeForm.offerItemId" placeholder="选择您提供交换的物品">
+                            <el-option
+                                v-for="item in myItems"
+                                :key="item.id"
+                                :label="item.idleName"
+                                :value="item.id">
+                                <div class="item-option">
+                                    <img :src="getFirstImage(item.pictureList)" class="item-img">
+                                    <div class="item-info">
+                                        <div class="item-name">{{ item.idleName }}</div>
+                                        <div class="item-price">¥{{ item.idlePrice }}</div>
+                                    </div>
+                                </div>
+                            </el-option>
+                        </el-select>
+                    </el-form-item>
+                    
+                    <el-form-item label="交换理由" prop="exchangeReason">
+                        <el-input
+                            type="textarea"
+                            :rows="4"
+                            placeholder="请输入交换理由，向对方说明为什么想要交换这个物品"
+                            v-model="exchangeForm.exchangeReason">
+                        </el-input>
+                    </el-form-item>
+                </el-form>
+                
+                <div class="exchange-preview" v-if="exchangeForm.offerItemId">
+                    <h4>交换预览</h4>
+                    <el-divider></el-divider>
+                    <div class="exchange-preview-content">
+                        <div class="preview-item">
+                            <h4>我将获得</h4>
+                            <div class="item-card" v-if="idleItemInfo">
+                                <img :src="getImageUrl(processedPictureList[0])" class="preview-img">
+                                <div class="preview-info">
+                                    <div class="preview-name">{{ idleItemInfo.idleName }}</div>
+                                    <div class="preview-price">¥{{ idleItemInfo.idlePrice }}</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="exchange-arrow">
+                            <i class="el-icon-right"></i>
+                        </div>
+                        <div class="preview-item">
+                            <h4>我将付出</h4>
+                            <div class="item-card" v-if="selectedMyItem">
+                                <img :src="getFirstImage(selectedMyItem.pictureList)" class="preview-img">
+                                <div class="preview-info">
+                                    <div class="preview-name">{{ selectedMyItem.idleName }}</div>
+                                    <div class="preview-price">¥{{ selectedMyItem.idlePrice }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <span slot="footer" class="dialog-footer">
+                    <el-button @click="exchangeDialogVisible = false">取 消</el-button>
+                    <el-button type="primary" @click="submitExchangeRequest" :loading="submitLoading">提交交换请求</el-button>
+                </span>
+            </el-dialog>
+            
+            <!-- 添加查看交换请求弹窗 -->
+            <el-dialog
+                title="交换请求管理"
+                :visible.sync="exchangeRequestsDialogVisible"
+                width="70%">
+                <el-tabs v-model="activeRequestTab">
+                    <el-tab-pane label="收到的请求" name="received">
+                        <div v-loading="requestsLoading">
+                            <div v-if="receivedRequests.length === 0" class="empty-requests">
+                                <i class="el-icon-info"></i>
+                                <p>暂无收到的交换请求</p>
+                            </div>
+                            <el-card v-for="request in receivedRequests" :key="request.id" class="request-card">
+                                <div class="request-header">
+                                    <div class="request-user">
+                                        <img :src="request.requestUser.avatar" class="user-avatar">
+                                        <span>{{ request.requestUser.nickname }}</span>
+                                    </div>
+                                    <div class="request-time">{{ request.createTime }}</div>
+                                </div>
+                                <div class="request-content">
+                                    <div class="exchange-items">
+                                        <div class="item-card">
+                                            <div class="item-title">对方想要的物品</div>
+                                            <img :src="getFirstImage(request.requestItem.pictureList)" class="item-img">
+                                            <div class="item-info">
+                                                <div class="item-name">{{ request.requestItem.idleName }}</div>
+                                                <div class="item-price">¥{{ request.requestItem.idlePrice }}</div>
+                                            </div>
+                                        </div>
+                                        <div class="exchange-arrow">
+                                            <i class="el-icon-right"></i>
+                                        </div>
+                                        <div class="item-card">
+                                            <div class="item-title">对方提供的物品</div>
+                                            <img :src="getFirstImage(request.offerItem.pictureList)" class="item-img">
+                                            <div class="item-info">
+                                                <div class="item-name">{{ request.offerItem.idleName }}</div>
+                                                <div class="item-price">¥{{ request.offerItem.idlePrice }}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="request-reason">
+                                        <div class="reason-title">交换理由:</div>
+                                        <div class="reason-content">{{ request.exchangeReason }}</div>
+                                    </div>
+                                </div>
+                                <div class="request-actions">
+                                    <el-tag :type="getStatusTag(request.status).type">{{ getStatusTag(request.status).text }}</el-tag>
+                                    <div class="action-buttons" v-if="request.status === 0">
+                                        <el-button type="success" size="small" @click="acceptRequest(request.id)">接受</el-button>
+                                        <el-button type="danger" size="small" @click="rejectRequest(request.id)">拒绝</el-button>
+                                    </div>
+                                    <div class="action-buttons" v-if="request.status === 1">
+                                        <el-button type="primary" size="small" @click="completeExchange(request.id)">完成交换</el-button>
+                                    </div>
+                                </div>
+                            </el-card>
+                        </div>
+                    </el-tab-pane>
+                    <el-tab-pane label="我发送的请求" name="sent">
+                        <div v-loading="requestsLoading">
+                            <div v-if="sentRequests.length === 0" class="empty-requests">
+                                <i class="el-icon-info"></i>
+                                <p>暂无发送的交换请求</p>
+                            </div>
+                            <el-card v-for="request in sentRequests" :key="request.id" class="request-card">
+                                <div class="request-header">
+                                    <div class="request-user">
+                                        <img :src="request.itemOwner.avatar" class="user-avatar">
+                                        <span>发送给: {{ request.itemOwner.nickname }}</span>
+                                    </div>
+                                    <div class="request-time">{{ request.createTime }}</div>
+                                </div>
+                                <div class="request-content">
+                                    <div class="exchange-items">
+                                        <div class="item-card">
+                                            <div class="item-title">我想要的物品</div>
+                                            <img :src="getFirstImage(request.requestItem.pictureList)" class="item-img">
+                                            <div class="item-info">
+                                                <div class="item-name">{{ request.requestItem.idleName }}</div>
+                                                <div class="item-price">¥{{ request.requestItem.idlePrice }}</div>
+                                            </div>
+                                        </div>
+                                        <div class="exchange-arrow">
+                                            <i class="el-icon-right"></i>
+                                        </div>
+                                        <div class="item-card">
+                                            <div class="item-title">我提供的物品</div>
+                                            <img :src="getFirstImage(request.offerItem.pictureList)" class="item-img">
+                                            <div class="item-info">
+                                                <div class="item-name">{{ request.offerItem.idleName }}</div>
+                                                <div class="item-price">¥{{ request.offerItem.idlePrice }}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="request-reason">
+                                        <div class="reason-title">交换理由:</div>
+                                        <div class="reason-content">{{ request.exchangeReason }}</div>
+                                    </div>
+                                </div>
+                                <div class="request-actions">
+                                    <el-tag :type="getStatusTag(request.status).type">{{ getStatusTag(request.status).text }}</el-tag>
+                                </div>
+                            </el-card>
+                        </div>
+                    </el-tab-pane>
+                </el-tabs>
+            </el-dialog>
+
+            <!-- 添加捐赠弹窗 -->
+            <el-dialog
+                title="爱心捐赠"
+                :visible.sync="donationDialogVisible"
+                width="50%">
+                <el-form :model="donationForm" :rules="donationRules" ref="donationForm" label-width="120px">
+                    <el-form-item label="捐赠物品" prop="itemId">
+                        <div class="donation-preview-item">
+                            <div v-if="idleItemInfo">
+                                <div class="item-preview">
+                                    <img :src="getImageUrl(processedPictureList[0])" class="preview-img">
+                                    <div class="item-info">
+                                        <div class="item-name">{{ idleItemInfo.idleName }}</div>
+                                        <div class="item-price">¥{{ idleItemInfo.idlePrice }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </el-form-item>
+                    
+                    <el-form-item label="捐赠类型" prop="donationType">
+                        <el-radio-group v-model="donationForm.donationType">
+                            <el-radio :label="0">公益捐赠</el-radio>
+                            <el-radio :label="1">环保回收</el-radio>
+                        </el-radio-group>
+                    </el-form-item>
+                    
+                    <el-form-item label="捐赠理由" prop="donationReason">
+                        <el-input
+                            type="textarea"
+                            :rows="4"
+                            placeholder="请输入捐赠理由，说明为什么想要捐赠这个物品"
+                            v-model="donationForm.donationReason">
+                        </el-input>
+                    </el-form-item>
+                </el-form>
+                
+                <div class="donation-notes">
+                    <p><i class="el-icon-info"></i> 捐赠说明：</p>
+                    <p>1. 公益捐赠：您的物品将捐赠给有需要的人或公益组织</p>
+                    <p>2. 环保回收：闲置物品将被环保回收，减少资源浪费</p>
+                    <p>3. 捐赠成功后，物品将自动下架</p>
+                    <p>4. 捐赠后可能有工作人员与您联系，请保持联系方式畅通</p>
+                </div>
+                
+                <span slot="footer" class="dialog-footer">
+                    <el-button @click="donationDialogVisible = false">取 消</el-button>
+                    <el-button type="primary" @click="submitDonationRequest" :loading="submitLoading">提交捐赠</el-button>
+                </span>
+            </el-dialog>
+
+            <!-- 添加举报弹窗 -->
+            <el-dialog
+                title="举报"
+                :visible.sync="reportDialogVisible"
+                width="50%">
+                <report-form 
+                    :reported-user-id="idleItemInfo.userId"
+                    :reported-item-id="idleItemInfo.id"
+                    @report-submitted="reportDialogVisible = false"
+                    @cancel="reportDialogVisible = false">
+                </report-form>
+            </el-dialog>
         </app-body>
     </div>
 </template>
@@ -140,13 +409,15 @@
     import AppHead from '../common/AppHeader.vue';
     import AppBody from '../common/AppPageBody.vue'
     import AppFoot from '../common/AppFoot.vue'
+    import ReportForm from '../common/ReportForm.vue';
 
     export default {
         name: "idle-details",
         components: {
             AppHead,
             AppBody,
-            AppFoot
+            AppFoot,
+            ReportForm
         },
         data() {
             return {
@@ -183,7 +454,48 @@
                 favoriteId:0,
                 imageLoading: true,
                 loadedImages: 0,
-                totalImages: 0
+                totalImages: 0,
+                exchangeDialogVisible: false,
+                exchangeForm: {
+                    requestItemId: '',
+                    offerItemId: '',
+                    itemOwnerId: '',
+                    exchangeReason: ''
+                },
+                exchangeRules: {
+                    offerItemId: [
+                        { required: true, message: '请选择您提供交换的物品', trigger: 'change' }
+                    ],
+                    exchangeReason: [
+                        { required: true, message: '请输入交换理由', trigger: 'blur' },
+                        { min: 5, max: 200, message: '长度在 5 到 200 个字符', trigger: 'blur' }
+                    ]
+                },
+                submitLoading: false,
+                myItems: [],
+                selectedMyItem: null,
+                exchangeRequestsDialogVisible: false,
+                activeRequestTab: 'received',
+                receivedRequests: [],
+                sentRequests: [],
+                requestsLoading: false,
+                // 捐赠相关数据
+                donationDialogVisible: false,
+                donationForm: {
+                    itemId: '',
+                    donationType: 0,
+                    donationReason: ''
+                },
+                donationRules: {
+                    donationType: [
+                        { required: true, message: '请选择捐赠类型', trigger: 'change' }
+                    ],
+                    donationReason: [
+                        { required: true, message: '请输入捐赠理由', trigger: 'blur' },
+                        { min: 5, max: 200, message: '长度在 5 到 200 个字符', trigger: 'blur' }
+                    ]
+                },
+                reportDialogVisible: false
             };
         },
         computed: {
@@ -206,6 +518,9 @@
                     name: img,
                     url: this.getImageUrl(img)
                 }));
+            },
+            selectedMyItem() {
+                return this.myItems.find(item => item.id === this.exchangeForm.offerItemId);
             }
         },
         created(){
@@ -547,6 +862,217 @@
                 }
                 return true;
             },
+            exchangeButton(idleItemInfo) {
+                // 设置表单初始值
+                this.exchangeForm.requestItemId = idleItemInfo.id;
+                this.exchangeForm.itemOwnerId = idleItemInfo.userId;
+                
+                // 加载我的可交换物品
+                this.loadMyItems();
+                
+                // 显示对话框
+                this.exchangeDialogVisible = true;
+            },
+            loadMyItems() {
+                this.$api.checkMyIdle().then(res => {
+                    if (res.data) {
+                        // 过滤出在售状态的物品
+                        this.myItems = res.data.filter(item => item.idleStatus === 1);
+                    }
+                }).catch(err => {
+                    console.error('获取我的物品失败', err);
+                    this.$message.error('获取我的物品失败');
+                });
+            },
+            submitExchangeRequest() {
+                this.$refs.exchangeForm.validate((valid) => {
+                    if (valid) {
+                        this.submitLoading = true;
+                        this.$api.createExchangeRequest({
+                            requestItemId: this.exchangeForm.requestItemId,
+                            offerItemId: this.exchangeForm.offerItemId,
+                            itemOwnerId: this.exchangeForm.itemOwnerId,
+                            exchangeReason: this.exchangeForm.exchangeReason
+                        }).then(res => {
+                            if (res.status_code === 1) {
+                                this.$message.success('交换请求已发送');
+                                this.exchangeDialogVisible = false;
+                                
+                                // 清空表单
+                                this.exchangeForm.offerItemId = '';
+                                this.exchangeForm.exchangeReason = '';
+                            } else {
+                                this.$message.error(res.msg || '发送交换请求失败');
+                            }
+                        }).catch(err => {
+                            console.error('发送交换请求失败', err);
+                            this.$message.error('发送交换请求失败');
+                        }).finally(() => {
+                            this.submitLoading = false;
+                        });
+                    } else {
+                        return false;
+                    }
+                });
+            },
+            viewReceivedRequests() {
+                this.exchangeRequestsDialogVisible = true;
+                this.loadExchangeRequests();
+            },
+            loadExchangeRequests() {
+                this.requestsLoading = true;
+                
+                // 加载收到的请求
+                this.$api.getReceivedExchangeRequests().then(res => {
+                    if (res.data) {
+                        this.receivedRequests = res.data;
+                    } else {
+                        this.receivedRequests = [];
+                    }
+                }).catch(err => {
+                    console.error('获取收到的交换请求失败', err);
+                    this.$message.error('获取收到的交换请求失败');
+                });
+                
+                // 加载发送的请求
+                this.$api.getMyExchangeRequests().then(res => {
+                    if (res.data) {
+                        this.sentRequests = res.data;
+                    } else {
+                        this.sentRequests = [];
+                    }
+                }).catch(err => {
+                    console.error('获取发送的交换请求失败', err);
+                    this.$message.error('获取发送的交换请求失败');
+                }).finally(() => {
+                    this.requestsLoading = false;
+                });
+            },
+            getStatusTag(status) {
+                const statusMap = {
+                    0: { type: 'info', text: '等待审核' },
+                    1: { type: 'success', text: '已接受' },
+                    2: { type: 'danger', text: '已拒绝' },
+                    3: { type: 'primary', text: '已完成' }
+                };
+                return statusMap[status] || { type: 'info', text: '未知状态' };
+            },
+            acceptRequest(requestId) {
+                this.$confirm('确定接受此交换请求吗?', '提示', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    type: 'warning'
+                }).then(() => {
+                    this.$api.acceptExchangeRequest(requestId).then(res => {
+                        if (res.status_code === 1) {
+                            this.$message.success('已接受交换请求');
+                            this.loadExchangeRequests();
+                        } else {
+                            this.$message.error(res.msg || '操作失败');
+                        }
+                    }).catch(err => {
+                        console.error('接受交换请求失败', err);
+                        this.$message.error('接受交换请求失败');
+                    });
+                }).catch(() => {
+                    // 取消操作
+                });
+            },
+            rejectRequest(requestId) {
+                this.$confirm('确定拒绝此交换请求吗?', '提示', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    type: 'warning'
+                }).then(() => {
+                    this.$api.rejectExchangeRequest(requestId).then(res => {
+                        if (res.status_code === 1) {
+                            this.$message.success('已拒绝交换请求');
+                            this.loadExchangeRequests();
+                        } else {
+                            this.$message.error(res.msg || '操作失败');
+                        }
+                    }).catch(err => {
+                        console.error('拒绝交换请求失败', err);
+                        this.$message.error('拒绝交换请求失败');
+                    });
+                }).catch(() => {
+                    // 取消操作
+                });
+            },
+            completeExchange(requestId) {
+                this.$confirm('确认已完成物品交换吗?', '提示', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    type: 'warning'
+                }).then(() => {
+                    this.$api.completeExchange(requestId).then(res => {
+                        if (res.status_code === 1) {
+                            this.$message.success('交换已完成');
+                            this.loadExchangeRequests();
+                        } else {
+                            this.$message.error(res.msg || '操作失败');
+                        }
+                    }).catch(err => {
+                        console.error('完成交换失败', err);
+                        this.$message.error('完成交换失败');
+                    });
+                }).catch(() => {
+                    // 取消操作
+                });
+            },
+            getFirstImage(pictureList) {
+                if (Array.isArray(pictureList)) {
+                    return this.getImageUrl(pictureList[0]);
+                } else if (typeof pictureList === 'string') {
+                    return this.getImageUrl(pictureList);
+                } else {
+                    console.error('无效的图片列表格式');
+                    return '';
+                }
+            },
+            // 捐赠相关方法
+            donationButton(idleItemInfo) {
+                this.donationForm.itemId = idleItemInfo.id;
+                this.donationDialogVisible = true;
+            },
+            submitDonationRequest() {
+                this.$refs.donationForm.validate((valid) => {
+                    if (valid) {
+                        this.submitLoading = true;
+                        this.$api.createDonationRequest({
+                            itemId: this.donationForm.itemId,
+                            donationType: this.donationForm.donationType,
+                            donationReason: this.donationForm.donationReason
+                        }).then(res => {
+                            if (res.status_code === 1) {
+                                this.$message.success('捐赠请求已提交');
+                                this.donationDialogVisible = false;
+                                
+                                // 清空表单
+                                this.donationForm.donationType = 0;
+                                this.donationForm.donationReason = '';
+                                
+                                // 更新物品状态
+                                this.idleItemInfo.idleStatus = 2; // 捐赠中自动下架
+                                
+                            } else {
+                                this.$message.error(res.msg || '提交捐赠请求失败');
+                            }
+                        }).catch(err => {
+                            console.error('提交捐赠请求失败', err);
+                            this.$message.error('提交捐赠请求失败');
+                        }).finally(() => {
+                            this.submitLoading = false;
+                        });
+                    } else {
+                        return false;
+                    }
+                });
+            },
+            // 添加举报按钮点击事件
+            reportButton(idleItemInfo) {
+                this.reportDialogVisible = true;
+            },
         },
     }
 </script>
@@ -557,12 +1083,14 @@
     }
 
     .details-header {
-        height: 80px;
+        min-height: 80px;
+        height: auto;
         border-bottom: 10px solid #f6f6f6;
         display: flex;
         justify-content: space-between;
         padding: 20px;
         align-items: center;
+        flex-wrap: wrap; /* 小屏幕支持换行 */
     }
 
     .details-header-user-info {
@@ -583,9 +1111,12 @@
     .details-header-buy {
         display: flex;
         align-items: center;
-        justify-content: space-between;
-        height: 50px;
-        width: 280px;
+        flex-wrap: wrap; /* 允许按钮换行 */
+        gap: 10px; /* 按钮之间的间距 */
+        min-height: 50px;
+        margin-left: 20px; /* 与用户信息保持一定距离 */
+        flex: 1; /* 占用剩余空间 */
+        justify-content: flex-end; /* 按钮靠右对齐 */
     }
 
     .details-info {
@@ -700,5 +1231,231 @@
     .image-slot i {
         font-size: 24px;
         margin-bottom: 10px;
+    }
+
+    /* 易物交换弹窗样式 */
+    .exchange-preview-item {
+        margin-bottom: 15px;
+    }
+    
+    .item-preview {
+        display: flex;
+        align-items: center;
+    }
+    
+    .item-option {
+        display: flex;
+        align-items: center;
+    }
+    
+    .item-img {
+        width: 40px;
+        height: 40px;
+        object-fit: cover;
+        margin-right: 10px;
+        border-radius: 4px;
+    }
+    
+    .owner-info {
+        display: flex;
+        align-items: center;
+    }
+    
+    .owner-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        margin-right: 10px;
+    }
+    
+    .owner-name {
+        font-size: 14px;
+        color: #303133;
+    }
+    
+    .exchange-preview {
+        margin-top: 20px;
+    }
+    
+    .exchange-preview h4 {
+        margin: 10px 0;
+        color: #409EFF;
+    }
+    
+    .exchange-preview-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .preview-item {
+        flex: 1;
+        text-align: center;
+    }
+    
+    .exchange-arrow {
+        font-size: 24px;
+        color: #409EFF;
+        margin: 0 20px;
+    }
+    
+    .preview-img {
+        width: 100px;
+        height: 100px;
+        object-fit: cover;
+        border-radius: 4px;
+        margin-bottom: 10px;
+    }
+    
+    .preview-info {
+        text-align: center;
+    }
+    
+    .preview-name {
+        font-size: 14px;
+        color: #303133;
+        margin-bottom: 5px;
+    }
+    
+    .preview-price {
+        font-size: 14px;
+        color: #F56C6C;
+    }
+    
+    /* 交换请求管理弹窗样式 */
+    .request-card {
+        margin-bottom: 20px;
+    }
+    
+    .request-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+    }
+    
+    .request-user {
+        display: flex;
+        align-items: center;
+    }
+    
+    .user-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        margin-right: 10px;
+    }
+    
+    .request-time {
+        color: #909399;
+        font-size: 14px;
+    }
+    
+    .request-content {
+        margin-bottom: 15px;
+    }
+    
+    .exchange-items {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+    }
+    
+    .item-card {
+        flex: 1;
+        text-align: center;
+        padding: 10px;
+        border: 1px solid #EBEEF5;
+        border-radius: 4px;
+    }
+    
+    .item-title {
+        font-size: 14px;
+        color: #409EFF;
+        margin-bottom: 10px;
+    }
+    
+    .item-img {
+        width: 80px;
+        height: 80px;
+        object-fit: cover;
+        border-radius: 4px;
+        margin-bottom: 10px;
+    }
+    
+    .item-info {
+        text-align: center;
+    }
+    
+    .item-name {
+        font-size: 14px;
+        color: #303133;
+        margin-bottom: 5px;
+    }
+    
+    .item-price {
+        font-size: 14px;
+        color: #F56C6C;
+    }
+    
+    .request-reason {
+        background-color: #F5F7FA;
+        padding: 10px;
+        border-radius: 4px;
+    }
+    
+    .reason-title {
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+    
+    .reason-content {
+        color: #606266;
+    }
+    
+    .request-actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .action-buttons {
+        display: flex;
+        gap: 10px;
+    }
+    
+    .empty-requests {
+        text-align: center;
+        padding: 30px;
+        color: #909399;
+    }
+    
+    .empty-requests i {
+        font-size: 48px;
+        margin-bottom: 10px;
+    }
+
+    /* 捐赠弹窗样式 */
+    .donation-preview-item {
+        margin-bottom: 15px;
+    }
+
+    .donation-notes {
+        background-color: #f8f8f8;
+        padding: 15px;
+        border-radius: 4px;
+        margin-top: 20px;
+        font-size: 14px;
+        color: #606266;
+    }
+
+    .donation-notes p {
+        margin: 5px 0;
+    }
+
+    .donation-notes i {
+        color: #E6A23C;
+        margin-right: 5px;
     }
 </style>

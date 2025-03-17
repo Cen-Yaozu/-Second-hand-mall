@@ -180,10 +180,16 @@
                 console.log(res);
                 if (res.status_code === 1) {
                     if (res.data.idleItem) {
-                        let imgList = JSON.parse(res.data.idleItem.pictureList);
-                        if (imgList.length > 0) {
-                            res.data.idleItem.imgUrl = imgList[0];
-                        } else {
+                        try {
+                            let imgList = res.data.idleItem.pictureList ? JSON.parse(res.data.idleItem.pictureList) : [];
+                            if (imgList && imgList.length > 0) {
+                                // 使用getImageUrl方法处理图片URL
+                                res.data.idleItem.imgUrl = this.getImageUrl(imgList[0]);
+                            } else {
+                                res.data.idleItem.imgUrl = '';
+                            }
+                        } catch (error) {
+                            console.error('解析商品图片列表失败:', error);
                             res.data.idleItem.imgUrl = '';
                         }
                     } else {
@@ -207,6 +213,29 @@
             })
         },
         methods: {
+            getImageUrl(url) {
+                // 检查url是否已经是HTTP URL
+                if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
+                    return url;
+                }
+                
+                // 检查url是否是一个本地文件路径
+                if (url && (url.startsWith('/') || url.startsWith('D:') || url.includes('\\') || url.includes('/'))) {
+                    // 如果是本地路径，则转换为服务器URL
+                    // 这里假设文件名是路径最后的部分
+                    const fileName = url.split(/[/\\]/).pop();
+                    // 构建访问URL
+                    return `http://localhost:8082/image?imageName=${fileName}`;
+                }
+                
+                // 如果是简单的文件名，直接构建访问URL
+                if (url && url.trim() !== '') {
+                    return `http://localhost:8082/image?imageName=${url}`;
+                }
+                
+                // 其他情况直接返回
+                return url;
+            },
             saveAddress(){
                 this.$api.addAddress(this.addressForm).then(res => {
                     if (res.status_code === 1) {

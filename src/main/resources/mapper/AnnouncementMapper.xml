@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.second.hand.trading.server.dao.AnnouncementDao">
+    <resultMap id="BaseResultMap" type="com.second.hand.trading.server.model.AnnouncementModel">
+        <id column="id" property="id" jdbcType="BIGINT"/>
+        <result column="title" property="title" jdbcType="VARCHAR"/>
+        <result column="content" property="content" jdbcType="VARCHAR"/>
+        <result column="type" property="type" jdbcType="INTEGER"/>
+        <result column="is_important" property="important" jdbcType="INTEGER"/>
+        <result column="status" property="status" jdbcType="INTEGER"/>
+        <result column="publish_time" property="publishTime" jdbcType="TIMESTAMP"/>
+        <result column="expire_time" property="expireTime" jdbcType="TIMESTAMP"/>
+        <result column="admin_id" property="adminId" jdbcType="BIGINT"/>
+        <result column="create_time" property="createTime" jdbcType="TIMESTAMP"/>
+        <result column="update_time" property="updateTime" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, title, content, type, is_important, status, publish_time, expire_time, admin_id, create_time, update_time
+    </sql>
+
+    <!-- 插入公告 -->
+    <insert id="insert" parameterType="com.second.hand.trading.server.model.AnnouncementModel" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO announcement (
+            title, content, type, is_important, status, publish_time, expire_time, admin_id, create_time, update_time
+        ) VALUES (
+            #{title}, #{content}, #{type}, #{important}, #{status}, #{publishTime}, #{expireTime}, #{adminId}, now(), now()
+        )
+    </insert>
+
+    <!-- 更新公告 -->
+    <update id="update" parameterType="com.second.hand.trading.server.model.AnnouncementModel">
+        UPDATE announcement
+        <set>
+            <if test="title != null">title = #{title},</if>
+            <if test="content != null">content = #{content},</if>
+            <if test="type != null">type = #{type},</if>
+            <if test="important != null">is_important = #{important},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="publishTime != null">publish_time = #{publishTime},</if>
+            <if test="expireTime != null">expire_time = #{expireTime},</if>
+            update_time = now()
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <!-- 根据ID查询公告 -->
+    <select id="selectById" resultMap="BaseResultMap" parameterType="java.lang.Long">
+        SELECT <include refid="Base_Column_List" />
+        FROM announcement
+        WHERE id = #{id}
+    </select>
+
+    <!-- 根据ID删除公告 -->
+    <delete id="deleteById" parameterType="java.lang.Long">
+        DELETE FROM announcement WHERE id = #{id}
+    </delete>
+
+    <!-- 获取公告列表 -->
+    <select id="selectList" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List" />
+        FROM announcement
+        <where>
+            <if test="type != null">AND type = #{type}</if>
+            <if test="status != null">AND status = #{status}</if>
+            <if test="important != null">AND is_important = #{important}</if>
+        </where>
+        ORDER BY
+        CASE WHEN is_important = 1 THEN 0 ELSE 1 END,
+        create_time DESC
+        <if test="start != null and limit != null">
+            LIMIT #{start}, #{limit}
+        </if>
+    </select>
+
+    <!-- 获取公告总数 -->
+    <select id="countList" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM announcement
+        <where>
+            <if test="type != null">AND type = #{type}</if>
+            <if test="status != null">AND status = #{status}</if>
+            <if test="important != null">AND is_important = #{important}</if>
+        </where>
+    </select>
+
+    <!-- 更新公告状态 -->
+    <update id="updateStatus">
+        UPDATE announcement
+        SET status = #{status}, update_time = now()
+        <if test="status == 1">
+            , publish_time = now()
+        </if>
+        WHERE id = #{id}
+    </update>
+</mapper> 

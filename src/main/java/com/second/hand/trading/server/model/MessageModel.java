@@ -56,6 +56,11 @@ public class MessageModel implements Serializable {
 
     private MessageModel toM;
 
+    /**
+     * 是否已读：0-未读，1-已读
+     */
+    private Integer isRead;
+
     private static final long serialVersionUID = 1L;
 
     public Long getId() {
@@ -144,6 +149,14 @@ public class MessageModel implements Serializable {
 
     public void setToM(MessageModel toM) {
         this.toM = toM;
+    }
+
+    public Integer getIsRead() {
+        return isRead;
+    }
+
+    public void setIsRead(Integer isRead) {
+        this.isRead = isRead;
     }
 
     @Override

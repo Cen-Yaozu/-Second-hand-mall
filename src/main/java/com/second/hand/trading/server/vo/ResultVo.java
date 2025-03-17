@@ -29,6 +29,14 @@ public class ResultVo<T> {
         resultVo.setData(data);
         return resultVo;
     }
+    
+    //返回成功状态码和成功消息
+    public static ResultVo success(String msg){
+        ResultVo resultVo=new ResultVo();
+        resultVo.setStatus_code(1);
+        resultVo.setMsg(msg);
+        return resultVo;
+    }
 
     //直接返回错误状态码和错误信息
     public static ResultVo fail(ErrorMsg errorMsg){

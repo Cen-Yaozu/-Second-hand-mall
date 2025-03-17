@@ -1,10 +1,10 @@
 <template>
     <div class="page-wrapper">
         <app-head></app-head>
-<!--        <app-carousel></app-carousel>-->
-
         <app-body>
             <div class="home-container">
+                <important-announcements></important-announcements>
+                
                 <div class="home-header">
                     <h1 class="main-title">淘易阁</h1>
                     <p class="sub-title">发现校园里的闲置宝藏</p>
@@ -74,15 +74,15 @@
     import AppHead from '../common/AppHeader.vue';
     import AppBody from '../common/AppPageBody.vue'
     import AppFoot from '../common/AppFoot.vue'
-    import AppCarousel from '@/components/common/AppCarousel';
+    import ImportantAnnouncements from '@/components/common/ImportantAnnouncements.vue';
 
     export default {
         name: "index",
         components: {
-            AppCarousel,
             AppHead,
             AppBody,
-            AppFoot
+            AppFoot,
+            ImportantAnnouncements
         },
         data() {
             return {
@@ -257,6 +257,10 @@
                 
                 // 其他情况使用默认头像
                 return `http://localhost:8082/image?imageName=default_avatar.webp`;
+            },
+            // 添加跳转到闲置易物交换页面的方法
+            goToExchange() {
+                this.$router.push('/exchange');
             }
         }
     }
@@ -264,23 +268,25 @@
 
 <style scoped>
     .page-wrapper {
+        display: flex;
+        flex-direction: column;
         min-height: 100vh;
     }
 
     .home-container {
-        padding: var(--el-spacing-xl);
-        min-height: 85vh;
+        padding: 20px;
+        padding-top: 0;
     }
 
     .home-header {
-        margin-bottom: var(--el-spacing-xl);
+        margin: 10px 0;
         text-align: center;
     }
 
     .main-title {
-        font-size: 32px;
+        font-size: 28px;
         color: var(--el-color-primary);
-        margin-bottom: var(--el-spacing-sm);
+        margin-bottom: 5px;
     }
 
     .sub-title {
@@ -467,5 +473,12 @@
         padding: 5px 10px;
         height: 30px;
         display: flex;
+    }
+
+    /* 添加新样式 */
+    .feature-buttons {
+        margin-top: 15px;
+        display: flex;
+        justify-content: center;
     }
 </style>

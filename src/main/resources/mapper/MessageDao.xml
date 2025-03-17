@@ -9,18 +9,33 @@
     <result column="create_time" jdbcType="TIMESTAMP" property="createTime" />
     <result column="to_user" jdbcType="BIGINT" property="toUser" />
     <result column="to_message" jdbcType="BIGINT" property="toMessage" />
+    <result column="is_read" jdbcType="INTEGER" property="isRead" />
   </resultMap>
   
   <!-- 保留自定义查询 -->
   <select id="getMyMessage" parameterType="java.lang.Long" resultMap="BaseResultMap">
-    select id, user_id, idle_id, content, create_time, to_user, to_message
+    select id, user_id, idle_id, content, create_time, to_user, to_message, is_read
     from sh_message
     where to_user = #{userId,jdbcType=BIGINT} order by id desc
   </select>
   
   <select id="getIdleMessage" parameterType="java.lang.Long" resultMap="BaseResultMap">
-    select id, user_id, idle_id, content, create_time, to_user, to_message
+    select id, user_id, idle_id, content, create_time, to_user, to_message, is_read
     from sh_message
     where idle_id = #{idleId,jdbcType=BIGINT} order by id desc
   </select>
+  
+  <!-- 获取用户未读消息数量 -->
+  <select id="getUnreadMessageCount" resultType="java.lang.Integer">
+    select count(*)
+    from sh_message
+    where to_user = #{userId,jdbcType=BIGINT} and is_read = 0
+  </select>
+  
+  <!-- 将用户的所有消息标记为已读 -->
+  <update id="markAllMessagesAsRead">
+    update sh_message
+    set is_read = 1
+    where to_user = #{userId,jdbcType=BIGINT} and is_read = 0
+  </update>
 </mapper>

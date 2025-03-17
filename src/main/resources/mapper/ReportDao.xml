@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.second.hand.trading.server.dao.ReportDao">
+    <resultMap id="BaseResultMap" type="com.second.hand.trading.server.model.ReportModel">
+        <id column="id" jdbcType="BIGINT" property="id" />
+        <result column="reporter_id" jdbcType="BIGINT" property="reporterId" />
+        <result column="reported_user_id" jdbcType="BIGINT" property="reportedUserId" />
+        <result column="reported_item_id" jdbcType="BIGINT" property="reportedItemId" />
+        <result column="report_type" jdbcType="INTEGER" property="reportType" />
+        <result column="report_reason" jdbcType="VARCHAR" property="reportReason" />
+        <result column="evidence_urls" jdbcType="VARCHAR" property="evidenceUrls" />
+        <result column="status" jdbcType="INTEGER" property="status" />
+        <result column="admin_id" jdbcType="BIGINT" property="adminId" />
+        <result column="handle_result" jdbcType="VARCHAR" property="handleResult" />
+        <result column="create_time" jdbcType="TIMESTAMP" property="createTime" />
+        <result column="update_time" jdbcType="TIMESTAMP" property="updateTime" />
+    </resultMap>
+    
+    <sql id="Base_Column_List">
+        id, reporter_id, reported_user_id, reported_item_id, report_type, report_reason, 
+        evidence_urls, status, admin_id, handle_result, create_time, update_time
+    </sql>
+    
+    <select id="findByReporterId" resultMap="BaseResultMap">
+        select
+        <include refid="Base_Column_List" />
+        from sh_report
+        where reporter_id = #{reporterId,jdbcType=BIGINT}
+        order by create_time desc
+    </select>
+    
+    <select id="findByReportedUserId" resultMap="BaseResultMap">
+        select
+        <include refid="Base_Column_List" />
+        from sh_report
+        where reported_user_id = #{reportedUserId,jdbcType=BIGINT}
+        order by create_time desc
+    </select>
+    
+    <select id="findByReportedItemId" resultMap="BaseResultMap">
+        select
+        <include refid="Base_Column_List" />
+        from sh_report
+        where reported_item_id = #{reportedItemId,jdbcType=BIGINT}
+        order by create_time desc
+    </select>
+    
+    <select id="findByStatus" resultMap="BaseResultMap">
+        select
+        <include refid="Base_Column_List" />
+        from sh_report
+        where status = #{status,jdbcType=INTEGER}
+        order by create_time desc
+    </select>
+</mapper> 

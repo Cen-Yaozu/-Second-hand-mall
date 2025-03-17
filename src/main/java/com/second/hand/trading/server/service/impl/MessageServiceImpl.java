@@ -141,4 +141,24 @@ public class MessageServiceImpl extends ServiceImpl<MessageDao, MessageModel> im
         }
         return list;
     }
+
+    /**
+     * 获取用户未读消息数量
+     * @param userId 用户ID
+     * @return 未读消息数量
+     */
+    @Override
+    public int getUnreadMessageCount(Long userId) {
+        return messageDao.getUnreadMessageCount(userId);
+    }
+    
+    /**
+     * 将用户的所有消息标记为已读
+     * @param userId 用户ID
+     * @return 是否成功
+     */
+    @Override
+    public boolean markAllMessagesAsRead(Long userId) {
+        return messageDao.markAllMessagesAsRead(userId) >= 0;
+    }
 }

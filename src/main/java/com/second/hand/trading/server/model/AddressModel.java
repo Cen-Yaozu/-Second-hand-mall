@@ -1,11 +1,13 @@
 package com.second.hand.trading.server.model;
 
+import com.baomidou.mybatisplus.annotation.TableName;
 import java.io.Serializable;
 
 /**
  * sh_address
  * @author myl
  */
+@TableName("sh_address")
 public class AddressModel implements Serializable {
     /**
      * 自增主键
@@ -151,7 +153,7 @@ public class AddressModel implements Serializable {
             && (this.getUserId() == null ? other.getUserId() == null : this.getUserId().equals(other.getUserId()));
     }
 
-    // 在HashMap的“键”部分存放自定义的对象，
+    // 在HashMap的"键"部分存放自定义的对象，
     // 一定要在这个对象里用自己的equals和hashCode方法来覆盖Object里的同名方法。
 
     @Override

@@ -35,6 +35,14 @@
 									<i class="el-icon-s-custom"></i>
 									<span slot="title">用户管理</span>
 								</el-menu-item>
+								<el-menu-item index="4">
+									<i class="el-icon-warning"></i>
+									<span slot="title">举报管理</span>
+								</el-menu-item>
+								<el-menu-item index="5">
+									<i class="el-icon-chat-dot-square"></i>
+									<span slot="title">公告管理</span>
+								</el-menu-item>
 							</el-menu>
 						</el-col>
 					</el-aside>
@@ -42,6 +50,8 @@
 						<IdleGoods v-if="mode == 1"></IdleGoods>
 						<orderList v-if="mode == 2"></orderList>
 						<userList v-if="mode == 3"></userList>
+						<ReportList v-if="mode == 4"></ReportList>
+						<AnnouncementManagement v-if="mode == 5"></AnnouncementManagement>
 					</el-main>
 				</div>
 			</el-container>
@@ -57,6 +67,8 @@
     import IdleGoods from '../common/IdleGoods.vue'
     import orderList from '../common/orderList.vue'
     import userList from '../common/userList.vue'
+    import ReportList from '../common/ReportList.vue'
+    import AnnouncementManagement from '../common/AnnouncementManagement.vue'
 
     export default {
         name: "platform-admin",
@@ -65,6 +77,8 @@
             IdleGoods,
             orderList,
             userList,
+            ReportList,
+            AnnouncementManagement
         },
         data() {
             return {

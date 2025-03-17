@@ -68,6 +68,7 @@
                     </div>
                     <div class="user-info-splace">
                         <el-button type="primary" plain @click="eidtAddress=true">编辑收货地址</el-button>
+                        <el-button type="primary" plain @click="goToMyReports">我的举报</el-button>
                     </div>
                 </div>
                 <div class="idle-container">
@@ -77,9 +78,13 @@
                         <el-tab-pane label="我的收藏" name="3"></el-tab-pane>
                         <el-tab-pane label="出售记录" name="4"></el-tab-pane>
                         <el-tab-pane label="购买记录" name="5"></el-tab-pane>
+                        <el-tab-pane label="我的举报" name="6"></el-tab-pane>
                     </el-tabs>
                     <div class="idle-container-list">
-                        <div v-for="(item,index) in dataList[activeName-1]" class="idle-container-list-item">
+                        <div v-if="activeName === '6'">
+                            <el-button type="primary" @click="goToMyReports">查看我的举报</el-button>
+                        </div>
+                        <div v-else v-for="(item,index) in dataList[activeName-1]" class="idle-container-list-item">
                             <div class="idle-container-list-item-detile" @click="toDetails(activeName,item)">
                                 <el-image
                                         style="width: 100px; height: 100px;"
@@ -594,6 +599,9 @@
                         })
                     }
                 }
+            },
+            goToMyReports() {
+                this.$router.push('/my-reports');
             }
         }
     }

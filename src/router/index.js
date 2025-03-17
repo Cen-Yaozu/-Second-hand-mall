@@ -86,6 +86,51 @@ export default new Router({
             meta: { title: '后台管理' }
         },
         {
+            path: '/donation',
+            component: () => import('../components/page/donation-index.vue'),
+            meta: { title: '爱心捐赠 | 淘易阁二手资源商城平台' }
+        },
+        {
+            path: '/donation/my-requests',
+            component: () => import('../components/page/donation-requests.vue'),
+            meta: { title: '我的捐赠 | 淘易阁二手资源商城平台' }
+        },
+        {
+            path: '/donation/detail',
+            component: () => import('../components/page/donation-detail.vue'),
+            meta: { title: '捐赠详情 | 淘易阁二手资源商城平台' }
+        },
+        {
+            path: '/my-reports',
+            component: () => import('../components/page/my-reports.vue'),
+            meta: { title: '我的举报 | 淘易阁二手资源商城平台' }
+        },
+        {
+            path: '/announcements',
+            component: () => import('../components/page/announcements.vue'),
+            meta: { title: '公告列表 | 淘易阁二手资源商城平台' }
+        },
+        {
+            path: '/announcement/:id',
+            component: () => import('../components/page/announcement-detail.vue'),
+            meta: { title: '公告详情 | 淘易阁二手资源商城平台' }
+        },
+        {
+            path: '/admin/announcement/list',
+            component: () => import('../components/admin/announcement/AdminAnnouncementList.vue'),
+            meta: { title: '公告管理 | 淘易阁二手资源商城平台' }
+        },
+        {
+            path: '/admin/announcement/create',
+            component: () => import('../components/page/announcement-edit.vue'),
+            meta: { title: '创建公告 | 淘易阁二手资源商城平台' }
+        },
+        {
+            path: '/admin/announcement/edit/:id',
+            component: () => import('../components/page/announcement-edit.vue'),
+            meta: { title: '编辑公告 | 淘易阁二手资源商城平台' }
+        },
+        {
             path: '*',
             redirect: '/'
         }

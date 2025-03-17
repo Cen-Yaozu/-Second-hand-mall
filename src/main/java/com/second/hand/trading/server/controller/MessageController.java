@@ -58,4 +58,33 @@ public class MessageController {
         }
         return ResultVo.fail(ErrorMsg.SYSTEM_ERROR);
     }
+
+    /**
+     * 获取未读消息数量
+     * @param shUserId 用户ID
+     * @return 未读消息数量
+     */
+    @GetMapping("/unread-count")
+    public ResultVo getUnreadMessageCount(@CookieValue("shUserId")
+                                         @NotNull(message = "登录异常 请重新登录")
+                                         @NotEmpty(message = "登录异常 请重新登录") String shUserId) {
+        int count = messageService.getUnreadMessageCount(Long.valueOf(shUserId));
+        return ResultVo.success(count);
+    }
+    
+    /**
+     * 标记所有消息为已读
+     * @param shUserId 用户ID
+     * @return 操作结果
+     */
+    @PutMapping("/mark-read")
+    public ResultVo markAllMessagesAsRead(@CookieValue("shUserId")
+                                         @NotNull(message = "登录异常 请重新登录")
+                                         @NotEmpty(message = "登录异常 请重新登录") String shUserId) {
+        boolean result = messageService.markAllMessagesAsRead(Long.valueOf(shUserId));
+        if (result) {
+            return ResultVo.success("标记已读成功");
+        }
+        return ResultVo.fail(ErrorMsg.SYSTEM_ERROR);
+    }
 }
